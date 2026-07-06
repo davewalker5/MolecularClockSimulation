@@ -6,32 +6,49 @@
 
 # Molecular Clock Simulation
 
-A Python toolkit for simulating sequence evolution and exploring molecular clock algorithms.
+<img src="https://github.com/davewalker5/MolecularClockSimulation/blob/main/diagrams/strict-clock-explorer.png" width="100%">
+
+A Python toolkit for simulating sequence evolution, exploring molecular clock models and implementing phylogenetic reconstruction algorithms from first principles.
 
 ## Overview
 
-Molecular clocks use DNA sequence variation to estimate evolutionary relationships and divergence times between species. This repository explores the computational techniques behind molecular clock analysis by building them from first principles.
+Molecular clocks use DNA sequence variation to estimate evolutionary relationships and divergence times between species.
 
-Rather than relying on existing phylogenetics libraries, the project implements the core concepts step by step, providing an opportunity to understand how evolutionary histories can be simulated, reconstructed and analysed.
+This project explores the computational foundations of molecular clock analysis by building the core algorithms from first principles. Rather than relying on existing phylogenetics libraries, the aim is to understand how evolutionary histories are simulated, represented, reconstructed and ultimately interpreted.
 
-The project is intended as both a computational exploration and an educational reference.
+The repository combines a reusable simulation library, a command-line interface for generating synthetic datasets, and an interactive explorer for experimenting with molecular clock models.
 
-## Current Status
+The project is intended both as an educational resource and as a computational laboratory for investigating phylogenetic algorithms.
 
-Version 0.1.0 implements a strict molecular clock simulator capable of generating complete synthetic evolutionary datasets.
+## Current Features
 
-The simulator:
+### Strict Molecular Clock Simulation
 
-- Generates random ancestral DNA sequences
-- Constructs rooted phylogenetic tree topologies
-- Calibrates ultrametric trees under a strict molecular clock
-- Simulates sequence evolution along each branch
-- Records the complete evolutionary history
-- Exports terminal sequences and ground truth in FASTA, Newick and JSON formats
+The core simulator implements a strict molecular clock capable of generating complete synthetic evolutionary datasets.
 
-These datasets provide a controlled environment for developing and evaluating molecular clock inference algorithms.
+Features include:
 
-Future development will focus on reconstructing phylogenetic trees and estimating divergence times from the simulated sequence data.
+- Random ancestral DNA sequence generation
+- Rooted phylogenetic tree generation
+- Balanced and random branching models
+- Ultrametric tree calibration
+- DNA sequence evolution along each branch
+- Complete evolutionary history tracking
+- Export of simulated datasets in FASTA, Newick and JSON formats
+
+These datasets provide known ground truth against which future phylogenetic reconstruction algorithms can be evaluated.
+
+### Strict Molecular Clock Explorer
+
+Version 0.2.0 introduces the **Strict Molecular Clock Explorer**, an interactive Streamlit application built directly on top of the simulation engine.
+
+The explorer allows simulation parameters to be adjusted interactively before generating a new evolutionary history and visualising the resulting phylogenetic tree.
+
+The command-line interface remains fully supported and continues to provide reproducible dataset generation for downstream analysis.
+
+## Getting Started
+
+Further documentation, including the documentation on intended field usage and how to run the application, is available in the project [Wiki](https://github.com/davewalker5/MolecularClockSimulation/wiki).
 
 ## Feedback
 

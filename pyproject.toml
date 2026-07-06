@@ -4,16 +4,17 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "molecular-clock-simulation"
-version = "0.1.0"
+version = "0.2.0"
 description = "Molecular Clock Simulation"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-  "pytest"
+  "streamlit>=1.36",
 ]
 
 [project.scripts]
-molecular-clock-sim = "molecular_clock_simulation.cli:main"
+molecular-clock-sim = "strictclock.cli:main"
+molecular-clock-explorer = "strictclock.explorer:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
