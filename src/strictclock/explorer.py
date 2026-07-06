@@ -29,7 +29,10 @@ DOWNLOAD_OPTIONS = (
 
 @dataclass(frozen=True)
 class ExplorerDefaults:
-    """Default values used to initialise the interactive explorer."""
+    """Default values used to initialise the interactive explorer.
+
+    :return: Immutable group of default UI control values.
+    """
 
     sequence_length: int = 1000
     number_of_taxa: int = 16
@@ -48,7 +51,17 @@ def build_config(
     root_age: float,
     mutation_rate: float,
 ) -> SimulationConfig:
-    """Create a simulator config from explorer controls."""
+    """Create a simulator config from explorer controls.
+
+    :param sequence_length: Number of nucleotide bases to generate.
+    :param number_of_taxa: Number of terminal taxa in the generated tree.
+    :param random_seed: Optional random seed used to reproduce the simulation.
+    :param tree_topology: Branching model, either balanced or random.
+    :param root_age: Age assigned to the root of the tree.
+    :param mutation_rate: Strict-clock substitution rate per site per unit time.
+    :return: Validated simulator configuration.
+    """
+    # Keep the Streamlit controls mapped through the public config validator.
     return SimulationConfig.from_dict(
         {
             "sequence_length": sequence_length,
@@ -62,7 +75,11 @@ def build_config(
 
 
 def summarize_result(result: SimulationResult) -> dict[str, Any]:
-    """Build compact summary values for display in the explorer."""
+    """Build compact summary values for display in the explorer.
+
+    :param result: Completed simulation result to summarize.
+    :return: Dictionary of scalar values suitable for Streamlit metrics.
+    """
     return {
         "number_of_taxa": result.config.number_of_taxa,
         "sequence_length": result.config.sequence_length,
@@ -75,12 +92,22 @@ def summarize_result(result: SimulationResult) -> dict[str, Any]:
 
 
 def count_mutations(root: TreeNode) -> int:
-    """Count mutation events recorded across all non-root branches."""
+    """Count mutation events recorded across all non-root branches.
+
+    :param root: Root node of the simulated tree.
+    :return: Total number of mutation events across the tree.
+    """
+    # Mutation events are stored on child nodes as events from their parent branch.
     return sum(len(node.mutations_from_parent) for node in root.walk())
 
 
 def tree_to_dot(root: TreeNode) -> str:
-    """Render a simulated tree as Graphviz DOT for Streamlit."""
+    """Render a simulated tree as Graphviz DOT for Streamlit.
+
+    :param root: Root node of the simulated tree.
+    :return: DOT source that can be displayed or rendered by Graphviz.
+    """
+    # Define graph-level styling once so node traversal only adds data-specific rows.
     lines = [
         "digraph strict_clock_tree {",
         "  graph [rankdir=TB, bgcolor=transparent, margin=0.08];",
@@ -91,6 +118,7 @@ def tree_to_dot(root: TreeNode) -> str:
         label = node_label(node)
         lines.append(f'  "{dot_escape(node.id)}" [label="{dot_escape(label)}"];')
         for child in node.children:
+            # Branch length labels expose the ultrametric timing used by the simulator.
             edge_label = f"{child.branch_length:.4g}"
             lines.append(
                 f'  "{dot_escape(node.id)}" -> "{dot_escape(child.id)}" '
@@ -101,28 +129,50 @@ def tree_to_dot(root: TreeNode) -> str:
 
 
 def node_label(node: TreeNode) -> str:
-    """Return a concise display label for one tree node."""
+    """Return a concise display label for one tree node.
+
+    :param node: Tree node to label.
+    :return: Display label containing node identity and age.
+    """
     name = node.name if node.is_leaf else f"internal {node.id}"
     return f"{name}\\nage {node.age:.4g}"
 
 
 def dot_escape(value: str) -> str:
-    """Escape a value for use in a quoted DOT string."""
+    """Escape a value for use in a quoted DOT string.
+
+    :param value: Raw string value to embed in DOT source.
+    :return: Escaped value safe for a quoted DOT string.
+    """
     return value.replace("\\", "\\\\").replace('"', '\\"')
 
 
 def fasta_text(result: SimulationResult) -> str:
-    """Return terminal sequences as FASTA text."""
+    """Return terminal sequences as FASTA text.
+
+    :param result: Completed simulation result.
+    :return: FASTA-formatted terminal sequences.
+    """
     return format_fasta(result.terminal_sequences)
 
 
 def metadata_json(result: SimulationResult) -> str:
-    """Return simulation metadata as formatted JSON text."""
+    """Return simulation metadata as formatted JSON text.
+
+    :param result: Completed simulation result.
+    :return: Pretty-printed metadata JSON ending with a newline.
+    """
+    # Sort keys so downloaded metadata is stable and easier to diff.
     return json.dumps(result.to_metadata(), indent=2, sort_keys=True) + "\n"
 
 
 def tree_png_bytes(dot_source: str) -> bytes:
-    """Render Graphviz DOT source to PNG bytes."""
+    """Render Graphviz DOT source to PNG bytes.
+
+    :param dot_source: DOT source describing the tree to render.
+    :return: PNG image bytes generated by Graphviz.
+    """
+    # Streamlit can display DOT directly, but downloads need a concrete image file.
     if shutil.which("dot") is None:
         raise RuntimeError("Graphviz 'dot' command is required for PNG export")
 
@@ -137,10 +187,15 @@ def tree_png_bytes(dot_source: str) -> bytes:
 
 
 def validate_download_stem(value: str) -> tuple[str | None, str | None]:
-    """Validate a user-entered download file stem."""
+    """Validate a user-entered download file stem.
+
+    :param value: Raw user-entered file stem.
+    :return: Tuple containing the cleaned stem and error message, one of which is None.
+    """
     stem = value.strip()
     if not stem:
         return None, "Enter a file stem before downloads are available."
+    # Reject path-like values because Streamlit download names should be filenames only.
     if "/" in stem or "\\" in stem:
         return None, "Enter a file stem only, without a folder or path."
     if stem in {".", ".."}:
@@ -151,7 +206,12 @@ def validate_download_stem(value: str) -> tuple[str | None, str | None]:
 
 
 def download_filename(stem: str, extension: str) -> str:
-    """Build a download filename from a validated stem and extension."""
+    """Build a download filename from a validated stem and extension.
+
+    :param stem: Validated file stem without path or extension.
+    :param extension: File extension without a leading dot.
+    :return: Complete filename for a download.
+    """
     return f"{stem}.{extension}"
 
 
@@ -163,7 +223,16 @@ def download_payload(
     metadata: str,
     tree_dot: str,
 ) -> tuple[str | bytes, str, str]:
-    """Return data, extension, and MIME type for one download option."""
+    """Return data, extension, and MIME type for one download option.
+
+    :param selection: User-selected download option.
+    :param result: Completed simulation result.
+    :param fasta: Pre-rendered FASTA text for the result.
+    :param metadata: Pre-rendered metadata JSON for the result.
+    :param tree_dot: DOT source for the generated tree.
+    :return: Tuple of download data, filename extension, and MIME type.
+    """
+    # Centralize option handling so the UI and tests share one source of truth.
     if selection == "FASTA":
         return fasta, "fasta", "text/plain"
     if selection == "Newick":
@@ -176,7 +245,11 @@ def download_payload(
 
 
 def main() -> int:
-    """Launch the Streamlit explorer via the installed console script."""
+    """Launch the Streamlit explorer via the installed console script.
+
+    :return: Process exit code from the Streamlit command.
+    """
+    # Delegate to Streamlit's runner so installed users can launch a console script.
     command = [
         sys.executable,
         "-m",
@@ -189,11 +262,16 @@ def main() -> int:
 
 
 def render_app() -> None:
-    """Render the Streamlit application."""
+    """Render the Streamlit application.
+
+    :return: None.
+    """
+    # Import Streamlit lazily so helper functions remain testable without app startup.
     import streamlit as st
 
     defaults = ExplorerDefaults()
 
+    # Configure the page before emitting any visible Streamlit elements.
     st.set_page_config(
         page_title="Strict Molecular Clock Explorer",
         page_icon="",
@@ -247,6 +325,7 @@ def render_app() -> None:
         )
         generate = st.button("Generate", type="primary", width="stretch")
 
+    # Store the latest result in session state so tab changes do not rerun simulation.
     if "result" not in st.session_state or generate:
         config = build_config(
             sequence_length=sequence_length,
@@ -264,6 +343,7 @@ def render_app() -> None:
     metadata = metadata_json(result)
     tree_dot = tree_to_dot(result.root)
 
+    # The tree is the primary visual output for this explorer release.
     st.subheader("Phylogenetic Tree")
     st.graphviz_chart(tree_dot, width="stretch")
 
@@ -287,6 +367,7 @@ def render_app() -> None:
     with newick_tab:
         st.code(result.newick, language="text")
     with download_tab:
+        # A single selector and button avoids four competing download controls.
         download_selection = st.selectbox(
             "Download",
             options=DOWNLOAD_OPTIONS,
@@ -299,6 +380,7 @@ def render_app() -> None:
         )
         download_stem, download_stem_error = validate_download_stem(download_stem_input)
         if download_stem_error:
+            # Keep the button visible but disabled so the required action is clear.
             st.warning(download_stem_error)
             st.download_button(
                 "Download",
@@ -310,6 +392,7 @@ def render_app() -> None:
             )
         else:
             try:
+                # PNG generation can fail when Graphviz is missing or cannot render.
                 download_data, extension, mime = download_payload(
                     download_selection,
                     result,
