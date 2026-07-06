@@ -18,41 +18,20 @@ The project is intended as both a computational exploration and an educational r
 
 ## Current Status
 
-Development is currently focused on the simulation framework.
+Version 0.1.0 implements a strict molecular clock simulator capable of generating complete synthetic evolutionary datasets.
 
-The initial implementation generates synthetic datasets by:
+The simulator:
 
-- generating a random ancestral DNA sequence;
-- constructing rooted phylogenetic trees;
-- calibrating ultrametric trees under a strict molecular clock;
-- simulating sequence evolution along each branch; and
-- exporting datasets in standard formats for later analysis.
+- Generates random ancestral DNA sequences
+- Constructs rooted phylogenetic tree topologies
+- Calibrates ultrametric trees under a strict molecular clock
+- Simulates sequence evolution along each branch
+- Records the complete evolutionary history
+- Exports terminal sequences and ground truth in FASTA, Newick and JSON formats
 
-These simulated datasets provide a known evolutionary history ("ground truth") against which molecular clock algorithms can be evaluated.
+These datasets provide a controlled environment for developing and evaluating molecular clock inference algorithms.
 
-## Planned Features
-
-The project is expected to grow to include:
-
-- strict molecular clock simulation;
-- relaxed molecular clock models;
-- alternative nucleotide substitution models;
-- phylogenetic tree reconstruction;
-- molecular clock calibration algorithms;
-- comparative evaluation of clock methods; and
-- visualisation of evolutionary histories and sequence evolution.
-
-As with the simulation framework, future components will prioritise clarity and understanding over algorithmic complexity.
-
-## Repository Structure
-
-```
-simulation/         Sequence evolution simulator
-docs/               Documentation and design notes
-examples/           Example configuration files
-```
-
-Additional components will be added as the project develops.
+Future development will focus on reconstructing phylogenetic trees and estimating divergence times from the simulated sequence data.
 
 ## Feedback
 
