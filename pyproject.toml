@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "molecular-clock-simulation"
+version = "0.1.0"
+description = "Molecular Clock Simulation"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+  "pytest"
+]
+
+[project.scripts]
+molecular-clock-sim = "molecular_clock_simulation.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project.optional-dependencies]
+dev = [
+  "pytest"
+]
