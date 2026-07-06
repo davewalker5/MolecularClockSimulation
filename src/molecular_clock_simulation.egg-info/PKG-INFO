@@ -1,0 +1,76 @@
+Metadata-Version: 2.4
+Name: molecular-clock-simulation
+Version: 0.2.0
+Summary: Molecular Clock Simulation
+Requires-Python: >=3.13
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: streamlit>=1.36
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"
+Dynamic: license-file
+
+[![GitHub issues](https://img.shields.io/github/issues/davewalker5/MolecularClockSimulation)](https://github.com/davewalker5/MolecularClockSimulation/issues)
+[![Releases](https://img.shields.io/github/v/release/davewalker5/MolecularClockSimulation.svg?include_prereleases)](https://github.com/davewalker5/MolecularClockSimulation/releases)
+[![License](https://img.shields.io/badge/License-mit-blue.svg)](https://github.com/davewalker5/MolecularClockSimulation/blob/main/LICENSE)
+[![Language](https://img.shields.io/badge/language-python-blue.svg)](https://www.python.org)
+[![GitHub code size in bytes](https://img.shields.io/github/languages/code-size/davewalker5/MolecularClockSimulation)](https://github.com/davewalker5/MolecularClockSimulation/)
+
+# Molecular Clock Simulation
+
+A Python toolkit for simulating sequence evolution and exploring molecular clock algorithms.
+
+## Overview
+
+Molecular clocks use DNA sequence variation to estimate evolutionary relationships and divergence times between species. This repository explores the computational techniques behind molecular clock analysis by building them from first principles.
+
+Rather than relying on existing phylogenetics libraries, the project implements the core concepts step by step, providing an opportunity to understand how evolutionary histories can be simulated, reconstructed and analysed.
+
+The project is intended as both a computational exploration and an educational reference.
+
+## Current Status
+
+Version 0.2.0 adds an interactive Streamlit explorer on top of the strict molecular clock simulator introduced in Version 0.1.0.
+
+The simulator:
+
+- Generates random ancestral DNA sequences
+- Constructs rooted phylogenetic tree topologies
+- Calibrates ultrametric trees under a strict molecular clock
+- Simulates sequence evolution along each branch
+- Records the complete evolutionary history
+- Exports terminal sequences and ground truth in FASTA, Newick and JSON formats
+
+These datasets provide a controlled environment for developing and evaluating molecular clock inference algorithms.
+
+The explorer allows simulation parameters to be adjusted interactively, then displays the generated tree, terminal FASTA sequences, Newick output, run summary and downloadable FASTA/Newick files.
+
+## Usage
+
+Generate a dataset from a JSON configuration file:
+
+```bash
+molecular-clock-sim --config data/config/ultrametric_tree.json
+```
+
+Launch the interactive explorer:
+
+```bash
+molecular-clock-explorer
+```
+
+During development, the explorer can also be launched directly:
+
+```bash
+streamlit run src/strictclock/explorer.py
+```
+
+Future development will focus on reconstructing phylogenetic trees and estimating divergence times from the simulated sequence data.
+
+## Feedback
+
+To file issues or suggestions, please use the [Issues](https://github.com/davewalker5/MolecularClockSimulation/issues) page for this project on GitHub.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

@@ -1,0 +1,3 @@
+[console_scripts]
+molecular-clock-explorer = strictclock.explorer:main
+molecular-clock-sim = strictclock.cli:main
