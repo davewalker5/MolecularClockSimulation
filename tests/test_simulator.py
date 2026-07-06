@@ -103,6 +103,7 @@ def test_explorer_helpers_render_current_simulation_result():
     assert summary["sequence_length"] == 20
     assert summary["number_of_mutations"] == count_mutations(result.root)
     assert dot.startswith("digraph strict_clock_tree")
+    assert "rankdir=LR" in dot
     assert FIELD_NOTES_DARK["page_bg"] in dot
     assert FIELD_NOTES_DARK["surface_elevated"] in dot
     assert "taxon_1" in dot

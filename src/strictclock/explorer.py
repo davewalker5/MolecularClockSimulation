@@ -126,11 +126,11 @@ def tree_to_dot(root: TreeNode) -> str:
     :param root: Root node of the simulated tree.
     :return: DOT source that can be displayed or rendered by Graphviz.
     """
-    # Define graph-level styling once so node traversal only adds data-specific rows.
+    # Use left-to-right rank direction so terminal taxa sit on the right.
     colors = FIELD_NOTES_DARK
     lines = [
         "digraph strict_clock_tree {",
-        f"  graph [rankdir=TB, bgcolor=\"{colors['page_bg']}\", margin=0.08];",
+        f"  graph [rankdir=LR, bgcolor=\"{colors['page_bg']}\", margin=0.08];",
         "  node [shape=box, style=\"rounded,filled\", "
         f"fillcolor=\"{colors['surface_elevated']}\", "
         f"color=\"{colors['border_strong']}\", "
