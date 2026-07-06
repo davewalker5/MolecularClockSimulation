@@ -6,7 +6,7 @@
 
 # Molecular Clock Simulation
 
-<img src="https://github.com/davewalker5/MolecularClockSimulation/blob/main/diagrams/strict-clock-explorer.png" width="100%">
+<img src="https://github.com/davewalker5/MolecularClockSimulation/blob/main/diagrams/relaxed-clock-explorer.png" width="100%">
 
 A Python toolkit for simulating sequence evolution, exploring molecular clock models and implementing phylogenetic reconstruction algorithms from first principles.
 
@@ -16,7 +16,7 @@ Molecular clocks use DNA sequence variation to estimate evolutionary relationshi
 
 This project explores the computational foundations of molecular clock analysis by building the core algorithms from first principles. It includes simulation engines for generating synthetic evolutionary datasets, interactive tools for exploring molecular clock models, and implementations of phylogenetic reconstruction algorithms. Rather than relying on existing phylogenetics libraries, the aim is to understand how evolutionary histories are simulated, represented, reconstructed and ultimately interpreted.
 
-The repository combines a reusable simulation library, a command-line interface for generating synthetic datasets, and an interactive explorer for experimenting with molecular clock models.
+The repository combines reusable simulation engines, command-line interfaces for generating synthetic datasets, and interactive explorers for experimenting with both strict and relaxed molecular clock models.
 
 The project is intended both as an educational resource and as a computational laboratory for investigating phylogenetic algorithms.
 
@@ -55,13 +55,27 @@ Features include:
 
 The relaxed clock engine complements the existing strict clock simulator, providing synthetic datasets for investigating the effects of rate variation on downstream phylogenetic analysis.
 
-### Strict Molecular Clock Explorer
+### Molecular Clock Explorers
 
-Version 0.2.0 introduces the **Strict Molecular Clock Explorer**, an interactive Streamlit application built directly on top of the simulation engine.
+The project includes interactive Streamlit applications built directly on top of both simulation engines.
 
-The explorer allows simulation parameters to be adjusted interactively before generating a new evolutionary history and visualising the resulting phylogenetic tree.
+#### Strict Molecular Clock Explorer
 
-The command-line interface remains fully supported and continues to provide reproducible dataset generation for downstream analysis.
+The **Strict Molecular Clock Explorer** provides an interactive interface for experimenting with the strict molecular clock model.
+
+Simulation parameters can be adjusted before generating a new evolutionary history and visualising the resulting ultrametric phylogenetic tree.
+
+The explorer provides an intuitive way to investigate how sequence length, mutation rate and tree topology influence the simulated dataset.
+
+#### Relaxed Molecular Clock Explorer
+
+The **Relaxed Molecular Clock Explorer** extends the same interface to the relaxed molecular clock model.
+
+In addition to the standard simulation controls, it introduces lineage-specific mutation rates and allows the effects of evolutionary rate variation to be explored interactively.
+
+The explorer visualises branch-specific genetic change, observed substitutions and simulation summary statistics, providing an intuitive way to investigate how relaxed molecular clocks differ from the strict clock model.
+
+Both explorers are built on the underlying command-line simulation engines, which remain fully supported for reproducible dataset generation and downstream analysis.
 
 ## Getting Started
 

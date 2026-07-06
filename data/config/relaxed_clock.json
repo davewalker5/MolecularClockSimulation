@@ -9,7 +9,7 @@
     "root_sequence": null
   },
   "tree": {
-    "max_depth": 4,
+    "max_depth": 3,
     "branching_mode": "binary",
     "branch_duration": 1.0,
     "duration_jitter": 0.0
