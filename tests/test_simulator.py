@@ -4,12 +4,12 @@ import pytest
 
 from molecular_clock_simulation import SimulationConfig, run_simulation, write_outputs
 from strictclock.explorer import (
-    FIELD_NOTES_DARK,
+    DARK_THEME,
     count_mutations,
     download_payload,
     download_filename,
     fasta_text,
-    field_notes_theme_css,
+    dark_theme_css,
     metadata_json,
     summarize_result,
     tree_png_bytes,
@@ -104,8 +104,8 @@ def test_explorer_helpers_render_current_simulation_result():
     assert summary["number_of_mutations"] == count_mutations(result.root)
     assert dot.startswith("digraph strict_clock_tree")
     assert "rankdir=LR" in dot
-    assert FIELD_NOTES_DARK["page_bg"] in dot
-    assert FIELD_NOTES_DARK["surface_elevated"] in dot
+    assert DARK_THEME["page_bg"] in dot
+    assert DARK_THEME["surface_elevated"] in dot
     assert "taxon_1" in dot
     assert fasta.count(">") == 4
     assert metadata["tree_newick"] == result.newick
@@ -118,12 +118,12 @@ def test_explorer_can_render_tree_png():
     assert png.startswith(b"\x89PNG\r\n\x1a\n")
 
 
-def test_field_notes_theme_css_uses_dark_palette():
-    css = field_notes_theme_css()
+def test_dark_theme_css_uses_dark_palette():
+    css = dark_theme_css()
 
-    assert FIELD_NOTES_DARK["page_bg"] in css
-    assert FIELD_NOTES_DARK["text"] in css
-    assert FIELD_NOTES_DARK["link"] in css
+    assert DARK_THEME["page_bg"] in css
+    assert DARK_THEME["text"] in css
+    assert DARK_THEME["link"] in css
 
 
 def test_download_stem_validation_builds_expected_filenames():

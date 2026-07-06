@@ -26,7 +26,7 @@ DOWNLOAD_OPTIONS = (
     "Tree PNG",
 )
 
-FIELD_NOTES_DARK = {
+DARK_THEME = {
     "page_bg": "#0b1220",
     "surface": "#111827",
     "surface_elevated": "#162032",
@@ -127,7 +127,7 @@ def tree_to_dot(root: TreeNode) -> str:
     :return: DOT source that can be displayed or rendered by Graphviz.
     """
     # Use left-to-right rank direction so terminal taxa sit on the right.
-    colors = FIELD_NOTES_DARK
+    colors = DARK_THEME
     lines = [
         "digraph strict_clock_tree {",
         f"  graph [rankdir=LR, bgcolor=\"{colors['page_bg']}\", margin=0.08];",
@@ -270,12 +270,12 @@ def download_payload(
     raise ValueError(f"Unknown download selection: {selection}")
 
 
-def field_notes_theme_css() -> str:
+def dark_theme_css() -> str:
     """Build app-specific CSS for the Field Notes dark theme.
 
     :return: CSS rules to inject into the Streamlit app.
     """
-    colors = FIELD_NOTES_DARK
+    colors = DARK_THEME
     # Streamlit's built-in theme handles the base palette; these rules tune widgets.
     return f"""
     <style>
@@ -408,7 +408,7 @@ def render_app() -> None:
         page_icon="",
         layout="wide",
     )
-    st.markdown(field_notes_theme_css(), unsafe_allow_html=True)
+    st.markdown(dark_theme_css(), unsafe_allow_html=True)
     st.title("Strict Molecular Clock Explorer")
 
     with st.sidebar:

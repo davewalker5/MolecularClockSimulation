@@ -4,6 +4,21 @@ import pytest
 
 from relaxedclock.cli import main
 from relaxedclock import RelaxedClockConfig, run_simulation, write_outputs
+from relaxedclock.explorer import (
+    DARK_THEME,
+    build_config,
+    count_mutations,
+    download_filename,
+    download_payload,
+    fasta_text,
+    dark_theme_css,
+    metadata_json,
+    summarize_result,
+    tree_png_bytes,
+    tree_to_dot,
+    tree_to_svg,
+    validate_download_stem,
+)
 
 
 def make_config(**overrides):
@@ -157,6 +172,185 @@ def test_newick_can_use_time_branch_lengths():
 
     assert ":1" in result.newick
     assert result.to_metadata()["summary"]["newick_branch_lengths"] == "time"
+
+
+def test_relaxed_explorer_helpers_render_current_simulation_result():
+    """Confirm relaxed explorer helpers expose tree, sequence, and rate summaries.
+
+    :return: None.
+    """
+    result = run_simulation(
+        make_config(
+            sequence={
+                "length": 20,
+                "alphabet": ["A", "C", "G", "T"],
+                "root_sequence": None,
+            }
+        )
+    )
+
+    summary = summarize_result(result)
+    dot = tree_to_dot(result.root)
+    time_dot = tree_to_dot(result.root, "time")
+    svg = tree_to_svg(result.root)
+    time_svg = tree_to_svg(result.root, "time")
+    fasta = fasta_text(result)
+    metadata = json.loads(metadata_json(result))
+
+    assert summary["terminal_taxa"] == 8
+    assert summary["sequence_length"] == 20
+    assert summary["total_observed_substitutions"] == count_mutations(result.root)
+    assert summary["minimum_lineage_rate"] <= summary["mean_lineage_rate"]
+    assert summary["mean_lineage_rate"] <= summary["maximum_lineage_rate"]
+    assert dot.startswith("digraph relaxed_clock_tree")
+    assert "rankdir=LR" in dot
+    assert DARK_THEME["page_bg"] in dot
+    assert DARK_THEME["surface_elevated"] in dot
+    assert "Taxon_1" in dot
+    assert "Newick genetic" in dot
+    assert "Newick time" in time_dot
+    assert time_dot != dot
+    assert svg.startswith("<svg")
+    assert "genetic" in svg
+    assert "time" in time_svg
+    assert time_svg != svg
+    assert fasta.count(">") == 8
+    assert metadata["tree_newick"] == result.newick
+
+
+def test_relaxed_explorer_build_config_uses_public_validator():
+    """Confirm explorer control values build a valid relaxed clock config.
+
+    :return: None.
+    """
+    config = build_config(
+        sequence_length=100,
+        max_depth=2,
+        random_seed=9,
+        branch_duration=1.0,
+        duration_jitter=0.1,
+        root_rate=0.05,
+        rate_sigma=0.25,
+        minimum_rate=0.001,
+        maximum_rate=0.2,
+        newick_branch_lengths="time",
+        allow_back_mutation=False,
+    )
+
+    assert config.sequence.length == 100
+    assert config.tree.max_depth == 2
+    assert config.outputs.newick_branch_lengths == "time"
+    assert config.mutation.allow_back_mutation is False
+
+
+def test_relaxed_explorer_can_render_tree_png():
+    """Confirm the relaxed explorer can export Graphviz trees as PNG.
+
+    :return: None.
+    """
+    result = run_simulation(
+        make_config(
+            sequence={
+                "length": 20,
+                "alphabet": ["A", "C", "G", "T"],
+                "root_sequence": None,
+            }
+        )
+    )
+    dot_png = tree_png_bytes(tree_to_dot(result.root))
+    scaled_png = tree_png_bytes(result.root, "genetic_change")
+    time_png = tree_png_bytes(result.root, "time")
+
+    assert dot_png.startswith(b"\x89PNG\r\n\x1a\n")
+    assert scaled_png.startswith(b"\x89PNG\r\n\x1a\n")
+    assert time_png.startswith(b"\x89PNG\r\n\x1a\n")
+    assert time_png != scaled_png
+
+
+def test_relaxed_dark_theme_css_uses_dark_palette():
+    """Confirm the relaxed explorer uses the same dark visual palette.
+
+    :return: None.
+    """
+    css = dark_theme_css()
+
+    assert DARK_THEME["page_bg"] in css
+    assert DARK_THEME["text"] in css
+    assert DARK_THEME["link"] in css
+
+
+def test_relaxed_download_stem_validation_builds_expected_filenames():
+    """Confirm relaxed explorer download filenames are validated consistently.
+
+    :return: None.
+    """
+    stem, error = validate_download_stem(" relaxed_run ")
+
+    assert stem == "relaxed_run"
+    assert error is None
+    assert download_filename(stem, "fasta") == "relaxed_run.fasta"
+    assert download_filename(stem, "newick") == "relaxed_run.newick"
+    assert download_filename(stem, "json") == "relaxed_run.json"
+    assert download_filename(stem, "png") == "relaxed_run.png"
+
+
+@pytest.mark.parametrize(
+    "selection,extension,mime",
+    [
+        ("FASTA", "fasta", "text/plain"),
+        ("Newick", "newick", "text/plain"),
+        ("Metadata JSON", "json", "application/json"),
+        ("Tree PNG", "png", "image/png"),
+    ],
+)
+def test_relaxed_download_payload_matches_selected_format(selection, extension, mime):
+    """Confirm relaxed explorer download options return the expected payload types.
+
+    :return: None.
+    """
+    result = run_simulation(
+        make_config(
+            sequence={
+                "length": 20,
+                "alphabet": ["A", "C", "G", "T"],
+                "root_sequence": None,
+            }
+        )
+    )
+    fasta = fasta_text(result)
+    metadata = metadata_json(result)
+    tree_dot = tree_to_dot(result.root)
+
+    data, actual_extension, actual_mime = download_payload(
+        selection,
+        result,
+        fasta=fasta,
+        metadata=metadata,
+        tree_dot=tree_dot,
+    )
+
+    assert actual_extension == extension
+    assert actual_mime == mime
+    if selection == "Tree PNG":
+        assert data.startswith(b"\x89PNG\r\n\x1a\n")
+    else:
+        assert isinstance(data, str)
+        assert data
+
+
+@pytest.mark.parametrize(
+    "value",
+    ["", "   ", "folder/run", "folder\\run", "run.json", ".", ".."],
+)
+def test_relaxed_download_stem_validation_rejects_missing_paths_and_extensions(value):
+    """Confirm invalid relaxed explorer download file stems are rejected.
+
+    :return: None.
+    """
+    stem, error = validate_download_stem(value)
+
+    assert stem is None
+    assert error
 
 
 def test_module_style_cli_accepts_config_option(tmp_path):
