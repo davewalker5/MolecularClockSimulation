@@ -1,0 +1,35 @@
+{
+  "simulation": {
+    "name": "relaxed-clock-example",
+    "random_seed": 42
+  },
+  "sequence": {
+    "length": 500,
+    "alphabet": ["A", "C", "G", "T"],
+    "root_sequence": null
+  },
+  "tree": {
+    "max_depth": 4,
+    "branching_mode": "binary",
+    "branch_duration": 1.0,
+    "duration_jitter": 0.0
+  },
+  "clock": {
+    "model": "autocorrelated_relaxed",
+    "root_rate": 0.01,
+    "rate_distribution": "lognormal",
+    "rate_sigma": 0.25,
+    "minimum_rate": 0.001,
+    "maximum_rate": 0.05
+  },
+  "mutation": {
+    "model": "simple_substitution",
+    "allow_back_mutation": true
+  },
+  "outputs": {
+    "write_fasta": true,
+    "write_newick": true,
+    "write_metadata": true,
+    "newick_branch_lengths": "genetic_change"
+  }
+}
