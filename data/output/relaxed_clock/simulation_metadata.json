@@ -1,0 +1,1441 @@
+{
+  "configuration": {
+    "clock": {
+      "maximum_rate": 0.05,
+      "minimum_rate": 0.001,
+      "model": "autocorrelated_relaxed",
+      "rate_distribution": "lognormal",
+      "rate_sigma": 0.25,
+      "root_rate": 0.01
+    },
+    "mutation": {
+      "allow_back_mutation": true,
+      "model": "simple_substitution"
+    },
+    "outputs": {
+      "newick_branch_lengths": "genetic_change",
+      "write_fasta": true,
+      "write_metadata": true,
+      "write_newick": true
+    },
+    "sequence": {
+      "alphabet": [
+        "A",
+        "C",
+        "G",
+        "T"
+      ],
+      "length": 500,
+      "root_sequence": null
+    },
+    "simulation": {
+      "name": "relaxed-clock-example",
+      "random_seed": 42
+    },
+    "tree": {
+      "branch_duration": 1.0,
+      "branching_mode": "binary",
+      "duration_jitter": 0.0,
+      "max_depth": 4
+    }
+  },
+  "generated_taxa": [
+    "Taxon_1",
+    "Taxon_10",
+    "Taxon_11",
+    "Taxon_12",
+    "Taxon_13",
+    "Taxon_14",
+    "Taxon_15",
+    "Taxon_16",
+    "Taxon_2",
+    "Taxon_3",
+    "Taxon_4",
+    "Taxon_5",
+    "Taxon_6",
+    "Taxon_7",
+    "Taxon_8",
+    "Taxon_9"
+  ],
+  "nodes": [
+    {
+      "branch_duration": 0.0,
+      "children": [
+        "node_2",
+        "node_17"
+      ],
+      "depth": 0,
+      "expected_substitutions": 0.0,
+      "genetic_change": 0.0,
+      "id": "node_1",
+      "is_terminal": false,
+      "lineage_rate": 0.01,
+      "mutations_from_parent": [],
+      "name": null,
+      "observed_substitutions": 0,
+      "parent": null,
+      "sequence": "AAGCCCAATAAACCACTCTGACTGGCCGAATAGGGATATAGGCAACGACATGTGCGGCGACCCTTGCGACAGTGACGCTTTCGCCGTTGCCTAAACCTATTTGAAGGAGTCTAGCAGCCGCAGTAAGGCACAATACCTCGTCCGTGTTACCAGACCAAACAAGACGTCCTCTTCAATGTTTAAATGACCCTCTCGTCATAAAACCTTTCTACTATGTGTTCCGCAAGAATCAACAACTACAATGGCGCGTCGTGAATAACGCGACGGCTGAGACGAACGGCGCGTGAATGAAGCGCTTAAACAGCTCAGGAGCCAGTCCCCTACGTCGCATATCCTGGCCACTGGAGGTGAAGCGAATGGTATCGATACGTAGGAGGTGTGCCTTCGTAGGCTGTTTCTCAGGACGCCCAACTATTCTTTCCAATCCTACATCTGTTTCTTGCGTCGTAGCGGGACCCTCCATTGTTACTTATTAGGTTCTCGTTATGTCTCATAATCTC"
+    },
+    {
+      "branch_duration": 1.0,
+      "children": [
+        "node_3",
+        "node_10"
+      ],
+      "depth": 1,
+      "expected_substitutions": 3.5521338857808606,
+      "genetic_change": 0.007104267771561722,
+      "id": "node_2",
+      "is_terminal": false,
+      "lineage_rate": 0.007104267771561722,
+      "mutations_from_parent": [
+        {
+          "ancestral_base": "A",
+          "derived_base": "G",
+          "position": 92
+        },
+        {
+          "ancestral_base": "G",
+          "derived_base": "T",
+          "position": 162
+        },
+        {
+          "ancestral_base": "T",
+          "derived_base": "G",
+          "position": 206
+        },
+        {
+          "ancestral_base": "C",
+          "derived_base": "A",
+          "position": 432
+        }
+      ],
+      "name": null,
+      "observed_substitutions": 4,
+      "parent": "node_1",
+      "sequence": "AAGCCCAATAAACCACTCTGACTGGCCGAATAGGGATATAGGCAACGACATGTGCGGCGACCCTTGCGACAGTGACGCTTTCGCCGTTGCCTGAACCTATTTGAAGGAGTCTAGCAGCCGCAGTAAGGCACAATACCTCGTCCGTGTTACCAGACCAAACAATACGTCCTCTTCAATGTTTAAATGACCCTCTCGTCATAAAACCTGTCTACTATGTGTTCCGCAAGAATCAACAACTACAATGGCGCGTCGTGAATAACGCGACGGCTGAGACGAACGGCGCGTGAATGAAGCGCTTAAACAGCTCAGGAGCCAGTCCCCTACGTCGCATATCCTGGCCACTGGAGGTGAAGCGAATGGTATCGATACGTAGGAGGTGTGCCTTCGTAGGCTGTTTCTCAGGACGCCCAACTATTCTTTCCAATCCTACATATGTTTCTTGCGTCGTAGCGGGACCCTCCATTGTTACTTATTAGGTTCTCGTTATGTCTCATAATCTC"
+    },
+    {
+      "branch_duration": 1.0,
+      "children": [
+        "node_4",
+        "node_7"
+      ],
+      "depth": 2,
+      "expected_substitutions": 2.865063993051668,
+      "genetic_change": 0.005730127986103336,
+      "id": "node_3",
+      "is_terminal": false,
+      "lineage_rate": 0.005730127986103336,
+      "mutations_from_parent": [
+        {
+          "ancestral_base": "C",
+          "derived_base": "G",
+          "position": 317
+        }
+      ],
+      "name": null,
+      "observed_substitutions": 1,
+      "parent": "node_2",
+      "sequence": "AAGCCCAATAAACCACTCTGACTGGCCGAATAGGGATATAGGCAACGACATGTGCGGCGACCCTTGCGACAGTGACGCTTTCGCCGTTGCCTGAACCTATTTGAAGGAGTCTAGCAGCCGCAGTAAGGCACAATACCTCGTCCGTGTTACCAGACCAAACAATACGTCCTCTTCAATGTTTAAATGACCCTCTCGTCATAAAACCTGTCTACTATGTGTTCCGCAAGAATCAACAACTACAATGGCGCGTCGTGAATAACGCGACGGCTGAGACGAACGGCGCGTGAATGAAGCGCTTAAACAGCTCAGGAGCCAGTGCCCTACGTCGCATATCCTGGCCACTGGAGGTGAAGCGAATGGTATCGATACGTAGGAGGTGTGCCTTCGTAGGCTGTTTCTCAGGACGCCCAACTATTCTTTCCAATCCTACATATGTTTCTTGCGTCGTAGCGGGACCCTCCATTGTTACTTATTAGGTTCTCGTTATGTCTCATAATCTC"
+    },
+    {
+      "branch_duration": 1.0,
+      "children": [
+        "leaf_5",
+        "leaf_6"
+      ],
+      "depth": 3,
+      "expected_substitutions": 3.326067697616615,
+      "genetic_change": 0.00665213539523323,
+      "id": "node_4",
+      "is_terminal": false,
+      "lineage_rate": 0.00665213539523323,
+      "mutations_from_parent": [
+        {
+          "ancestral_base": "C",
+          "derived_base": "T",
+          "position": 211
+        },
+        {
+          "ancestral_base": "C",
+          "derived_base": "A",
+          "position": 333
+        },
+        {
+          "ancestral_base": "G",
+          "derived_base": "A",
+          "position": 364
+        }
+      ],
+      "name": null,
+      "observed_substitutions": 3,
+      "parent": "node_3",
+      "sequence": "AAGCCCAATAAACCACTCTGACTGGCCGAATAGGGATATAGGCAACGACATGTGCGGCGACCCTTGCGACAGTGACGCTTTCGCCGTTGCCTGAACCTATTTGAAGGAGTCTAGCAGCCGCAGTAAGGCACAATACCTCGTCCGTGTTACCAGACCAAACAATACGTCCTCTTCAATGTTTAAATGACCCTCTCGTCATAAAACCTGTCTATTATGTGTTCCGCAAGAATCAACAACTACAATGGCGCGTCGTGAATAACGCGACGGCTGAGACGAACGGCGCGTGAATGAAGCGCTTAAACAGCTCAGGAGCCAGTGCCCTACGTCGCATATACTGGCCACTGGAGGTGAAGCGAATGGTATCAATACGTAGGAGGTGTGCCTTCGTAGGCTGTTTCTCAGGACGCCCAACTATTCTTTCCAATCCTACATATGTTTCTTGCGTCGTAGCGGGACCCTCCATTGTTACTTATTAGGTTCTCGTTATGTCTCATAATCTC"
+    },
+    {
+      "branch_duration": 1.0,
+      "children": [],
+      "depth": 4,
+      "expected_substitutions": 6.132478006867947,
+      "genetic_change": 0.012264956013735895,
+      "id": "leaf_5",
+      "is_terminal": true,
+      "lineage_rate": 0.012264956013735895,
+      "mutations_from_parent": [
+        {
+          "ancestral_base": "A",
+          "derived_base": "C",
+          "position": 10
+        },
+        {
+          "ancestral_base": "A",
+          "derived_base": "T",
+          "position": 14
+        },
+        {
+          "ancestral_base": "A",
+          "derived_base": "G",
+          "position": 161
+        },
+        {
+          "ancestral_base": "A",
+          "derived_base": "G",
+          "position": 231
+        },
+        {
+          "ancestral_base": "C",
+          "derived_base": "A",
+          "position": 280
+        },
+        {
+          "ancestral_base": "C",
+          "derived_base": "A",
+          "position": 326
+        },
+        {
+          "ancestral_base": "C",
+          "derived_base": "G",
+          "position": 468
+        },
+        {
+          "ancestral_base": "T",
+          "derived_base": "G",
+          "position": 486
+        }
+      ],
+      "name": "Taxon_1",
+      "observed_substitutions": 8,
+      "parent": "node_4",
+      "sequence": "AAGCCCAATACACCTCTCTGACTGGCCGAATAGGGATATAGGCAACGACATGTGCGGCGACCCTTGCGACAGTGACGCTTTCGCCGTTGCCTGAACCTATTTGAAGGAGTCTAGCAGCCGCAGTAAGGCACAATACCTCGTCCGTGTTACCAGACCAAACAGTACGTCCTCTTCAATGTTTAAATGACCCTCTCGTCATAAAACCTGTCTATTATGTGTTCCGCAAGAATCGACAACTACAATGGCGCGTCGTGAATAACGCGACGGCTGAGACGAACGGAGCGTGAATGAAGCGCTTAAACAGCTCAGGAGCCAGTGCCCTACGTAGCATATACTGGCCACTGGAGGTGAAGCGAATGGTATCAATACGTAGGAGGTGTGCCTTCGTAGGCTGTTTCTCAGGACGCCCAACTATTCTTTCCAATCCTACATATGTTTCTTGCGTCGTAGCGGGACCCTCCATTGTTAGTTATTAGGTTCTCGTTAGGTCTCATAATCTC"
+    },
+    {
+      "branch_duration": 1.0,
+      "children": [],
+      "depth": 4,
+      "expected_substitutions": 2.8714464179262205,
+      "genetic_change": 0.0057428928358524405,
+      "id": "leaf_6",
+      "is_terminal": true,
+      "lineage_rate": 0.0057428928358524405,
+      "mutations_from_parent": [
+        {
+          "ancestral_base": "A",
+          "derived_base": "C",
+          "position": 103
+        },
+        {
+          "ancestral_base": "G",
+          "derived_base": "T",
+          "position": 152
+        },
+        {
+          "ancestral_base": "G",
+          "derived_base": "T",
+          "position": 358
+        },
+        {
+          "ancestral_base": "G",
+          "derived_base": "C",
+          "position": 386
+        },
+        {
+          "ancestral_base": "T",
+          "derived_base": "A",
+          "position": 433
+        }
+      ],
+      "name": "Taxon_2",
+      "observed_substitutions": 5,
+      "parent": "node_4",
+      "sequence": "AAGCCCAATAAACCACTCTGACTGGCCGAATAGGGATATAGGCAACGACATGTGCGGCGACCCTTGCGACAGTGACGCTTTCGCCGTTGCCTGAACCTATTTGCAGGAGTCTAGCAGCCGCAGTAAGGCACAATACCTCGTCCGTGTTACCATACCAAACAATACGTCCTCTTCAATGTTTAAATGACCCTCTCGTCATAAAACCTGTCTATTATGTGTTCCGCAAGAATCAACAACTACAATGGCGCGTCGTGAATAACGCGACGGCTGAGACGAACGGCGCGTGAATGAAGCGCTTAAACAGCTCAGGAGCCAGTGCCCTACGTCGCATATACTGGCCACTGGAGGTGAAGCGAATTGTATCAATACGTAGGAGGTGTGCCTTCCTAGGCTGTTTCTCAGGACGCCCAACTATTCTTTCCAATCCTACATAAGTTTCTTGCGTCGTAGCGGGACCCTCCATTGTTACTTATTAGGTTCTCGTTATGTCTCATAATCTC"
+    },
+    {
+      "branch_duration": 1.0,
+      "children": [
+        "leaf_8",
+        "leaf_9"
+      ],
+      "depth": 3,
+      "expected_substitutions": 3.727325163746614,
+      "genetic_change": 0.007454650327493228,
+      "id": "node_7",
+      "is_terminal": false,
+      "lineage_rate": 0.007454650327493228,
+      "mutations_from_parent": [
+        {
+          "ancestral_base": "C",
+          "derived_base": "G",
+          "position": 208
+        },
+        {
+          "ancestral_base": "C",
+          "derived_base": "T",
+          "position": 220
+        },
+        {
+          "ancestral_base": "A",
+          "derived_base": "T",
+          "position": 300
+        },
+        {
+          "ancestral_base": "T",
+          "derived_base": "C",
+          "position": 431
+        }
+      ],
+      "name": null,
+      "observed_substitutions": 4,
+      "parent": "node_3",
+      "sequence": "AAGCCCAATAAACCACTCTGACTGGCCGAATAGGGATATAGGCAACGACATGTGCGGCGACCCTTGCGACAGTGACGCTTTCGCCGTTGCCTGAACCTATTTGAAGGAGTCTAGCAGCCGCAGTAAGGCACAATACCTCGTCCGTGTTACCAGACCAAACAATACGTCCTCTTCAATGTTTAAATGACCCTCTCGTCATAAAACCTGTGTACTATGTGTTTCGCAAGAATCAACAACTACAATGGCGCGTCGTGAATAACGCGACGGCTGAGACGAACGGCGCGTGAATGAAGCGCTTAATCAGCTCAGGAGCCAGTGCCCTACGTCGCATATCCTGGCCACTGGAGGTGAAGCGAATGGTATCGATACGTAGGAGGTGTGCCTTCGTAGGCTGTTTCTCAGGACGCCCAACTATTCTTTCCAATCCTACACATGTTTCTTGCGTCGTAGCGGGACCCTCCATTGTTACTTATTAGGTTCTCGTTATGTCTCATAATCTC"
+    },
+    {
+      "branch_duration": 1.0,
+      "children": [],
+      "depth": 4,
+      "expected_substitutions": 4.708005679007129,
+      "genetic_change": 0.009416011358014257,
+      "id": "leaf_8",
+      "is_terminal": true,
+      "lineage_rate": 0.009416011358014257,
+      "mutations_from_parent": [
+        {
+          "ancestral_base": "G",
+          "derived_base": "T",
+          "position": 105
+        },
+        {
+          "ancestral_base": "A",
+          "derived_base": "T",
+          "position": 161
+        },
+        {
+          "ancestral_base": "C",
+          "derived_base": "T",
+          "position": 193
+        },
+        {
+          "ancestral_base": "C",
+          "derived_base": "A",
+          "position": 326
+        },
+        {
+          "ancestral_base": "T",
+          "derived_base": "G",
+          "position": 395
+        },
+        {
+          "ancestral_base": "A",
+          "derived_base": "T",
+          "position": 422
+        }
+      ],
+      "name": "Taxon_3",
+      "observed_substitutions": 6,
+      "parent": "node_7",
+      "sequence": "AAGCCCAATAAACCACTCTGACTGGCCGAATAGGGATATAGGCAACGACATGTGCGGCGACCCTTGCGACAGTGACGCTTTCGCCGTTGCCTGAACCTATTTGAATGAGTCTAGCAGCCGCAGTAAGGCACAATACCTCGTCCGTGTTACCAGACCAAACATTACGTCCTCTTCAATGTTTAAATGACCCTCTTGTCATAAAACCTGTGTACTATGTGTTTCGCAAGAATCAACAACTACAATGGCGCGTCGTGAATAACGCGACGGCTGAGACGAACGGCGCGTGAATGAAGCGCTTAATCAGCTCAGGAGCCAGTGCCCTACGTAGCATATCCTGGCCACTGGAGGTGAAGCGAATGGTATCGATACGTAGGAGGTGTGCCTTCGTAGGCTGTGTCTCAGGACGCCCAACTATTCTTTCCTATCCTACACATGTTTCTTGCGTCGTAGCGGGACCCTCCATTGTTACTTATTAGGTTCTCGTTATGTCTCATAATCTC"
+    },
+    {
+      "branch_duration": 1.0,
+      "children": [],
+      "depth": 4,
+      "expected_substitutions": 2.2243331362180534,
+      "genetic_change": 0.004448666272436107,
+      "id": "leaf_9",
+      "is_terminal": true,
+      "lineage_rate": 0.004448666272436107,
+      "mutations_from_parent": [
+        {
+          "ancestral_base": "T",
+          "derived_base": "A",
+          "position": 480
+        }
+      ],
+      "name": "Taxon_4",
+      "observed_substitutions": 1,
+      "parent": "node_7",
+      "sequence": "AAGCCCAATAAACCACTCTGACTGGCCGAATAGGGATATAGGCAACGACATGTGCGGCGACCCTTGCGACAGTGACGCTTTCGCCGTTGCCTGAACCTATTTGAAGGAGTCTAGCAGCCGCAGTAAGGCACAATACCTCGTCCGTGTTACCAGACCAAACAATACGTCCTCTTCAATGTTTAAATGACCCTCTCGTCATAAAACCTGTGTACTATGTGTTTCGCAAGAATCAACAACTACAATGGCGCGTCGTGAATAACGCGACGGCTGAGACGAACGGCGCGTGAATGAAGCGCTTAATCAGCTCAGGAGCCAGTGCCCTACGTCGCATATCCTGGCCACTGGAGGTGAAGCGAATGGTATCGATACGTAGGAGGTGTGCCTTCGTAGGCTGTTTCTCAGGACGCCCAACTATTCTTTCCAATCCTACACATGTTTCTTGCGTCGTAGCGGGACCCTCCATTGTTACTTATTAGGTTCACGTTATGTCTCATAATCTC"
+    },
+    {
+      "branch_duration": 1.0,
+      "children": [
+        "node_11",
+        "node_14"
+      ],
+      "depth": 2,
+      "expected_substitutions": 3.565771915782281,
+      "genetic_change": 0.007131543831564562,
+      "id": "node_10",
+      "is_terminal": false,
+      "lineage_rate": 0.007131543831564562,
+      "mutations_from_parent": [
+        {
+          "ancestral_base": "T",
+          "derived_base": "C",
+          "position": 325
+        },
+        {
+          "ancestral_base": "T",
+          "derived_base": "A",
+          "position": 396
+        }
+      ],
+      "name": null,
+      "observed_substitutions": 2,
+      "parent": "node_2",
+      "sequence": "AAGCCCAATAAACCACTCTGACTGGCCGAATAGGGATATAGGCAACGACATGTGCGGCGACCCTTGCGACAGTGACGCTTTCGCCGTTGCCTGAACCTATTTGAAGGAGTCTAGCAGCCGCAGTAAGGCACAATACCTCGTCCGTGTTACCAGACCAAACAATACGTCCTCTTCAATGTTTAAATGACCCTCTCGTCATAAAACCTGTCTACTATGTGTTCCGCAAGAATCAACAACTACAATGGCGCGTCGTGAATAACGCGACGGCTGAGACGAACGGCGCGTGAATGAAGCGCTTAAACAGCTCAGGAGCCAGTCCCCTACGCCGCATATCCTGGCCACTGGAGGTGAAGCGAATGGTATCGATACGTAGGAGGTGTGCCTTCGTAGGCTGTTACTCAGGACGCCCAACTATTCTTTCCAATCCTACATATGTTTCTTGCGTCGTAGCGGGACCCTCCATTGTTACTTATTAGGTTCTCGTTATGTCTCATAATCTC"
+    },
+    {
+      "branch_duration": 1.0,
+      "children": [
+        "leaf_12",
+        "leaf_13"
+      ],
+      "depth": 3,
+      "expected_substitutions": 4.988444985211687,
+      "genetic_change": 0.009976889970423373,
+      "id": "node_11",
+      "is_terminal": false,
+      "lineage_rate": 0.009976889970423373,
+      "mutations_from_parent": [
+        {
+          "ancestral_base": "G",
+          "derived_base": "T",
+          "position": 139
+        },
+        {
+          "ancestral_base": "G",
+          "derived_base": "T",
+          "position": 386
+        },
+        {
+          "ancestral_base": "G",
+          "derived_base": "A",
+          "position": 487
+        }
+      ],
+      "name": null,
+      "observed_substitutions": 3,
+      "parent": "node_10",
+      "sequence": "AAGCCCAATAAACCACTCTGACTGGCCGAATAGGGATATAGGCAACGACATGTGCGGCGACCCTTGCGACAGTGACGCTTTCGCCGTTGCCTGAACCTATTTGAAGGAGTCTAGCAGCCGCAGTAAGGCACAATACCTCTTCCGTGTTACCAGACCAAACAATACGTCCTCTTCAATGTTTAAATGACCCTCTCGTCATAAAACCTGTCTACTATGTGTTCCGCAAGAATCAACAACTACAATGGCGCGTCGTGAATAACGCGACGGCTGAGACGAACGGCGCGTGAATGAAGCGCTTAAACAGCTCAGGAGCCAGTCCCCTACGCCGCATATCCTGGCCACTGGAGGTGAAGCGAATGGTATCGATACGTAGGAGGTGTGCCTTCTTAGGCTGTTACTCAGGACGCCCAACTATTCTTTCCAATCCTACATATGTTTCTTGCGTCGTAGCGGGACCCTCCATTGTTACTTATTAGGTTCTCGTTATATCTCATAATCTC"
+    },
+    {
+      "branch_duration": 1.0,
+      "children": [],
+      "depth": 4,
+      "expected_substitutions": 3.363907312184615,
+      "genetic_change": 0.006727814624369229,
+      "id": "leaf_12",
+      "is_terminal": true,
+      "lineage_rate": 0.006727814624369229,
+      "mutations_from_parent": [
+        {
+          "ancestral_base": "T",
+          "derived_base": "G",
+          "position": 133
+        },
+        {
+          "ancestral_base": "A",
+          "derived_base": "T",
+          "position": 263
+        },
+        {
+          "ancestral_base": "C",
+          "derived_base": "T",
+          "position": 333
+        },
+        {
+          "ancestral_base": "A",
+          "derived_base": "G",
+          "position": 350
+        },
+        {
+          "ancestral_base": "G",
+          "derived_base": "T",
+          "position": 482
+        }
+      ],
+      "name": "Taxon_5",
+      "observed_substitutions": 5,
+      "parent": "node_11",
+      "sequence": "AAGCCCAATAAACCACTCTGACTGGCCGAATAGGGATATAGGCAACGACATGTGCGGCGACCCTTGCGACAGTGACGCTTTCGCCGTTGCCTGAACCTATTTGAAGGAGTCTAGCAGCCGCAGTAAGGCACAAGACCTCTTCCGTGTTACCAGACCAAACAATACGTCCTCTTCAATGTTTAAATGACCCTCTCGTCATAAAACCTGTCTACTATGTGTTCCGCAAGAATCAACAACTACAATGGCGCGTCGTGAATAACGCGTCGGCTGAGACGAACGGCGCGTGAATGAAGCGCTTAAACAGCTCAGGAGCCAGTCCCCTACGCCGCATATTCTGGCCACTGGAGGTGGAGCGAATGGTATCGATACGTAGGAGGTGTGCCTTCTTAGGCTGTTACTCAGGACGCCCAACTATTCTTTCCAATCCTACATATGTTTCTTGCGTCGTAGCGGGACCCTCCATTGTTACTTATTAGGTTCTCTTTATATCTCATAATCTC"
+    },
+    {
+      "branch_duration": 1.0,
+      "children": [],
+      "depth": 4,
+      "expected_substitutions": 5.451870099408077,
+      "genetic_change": 0.010903740198816153,
+      "id": "leaf_13",
+      "is_terminal": true,
+      "lineage_rate": 0.010903740198816153,
+      "mutations_from_parent": [
+        {
+          "ancestral_base": "C",
+          "derived_base": "A",
+          "position": 411
+        },
+        {
+          "ancestral_base": "A",
+          "derived_base": "T",
+          "position": 430
+        }
+      ],
+      "name": "Taxon_6",
+      "observed_substitutions": 2,
+      "parent": "node_11",
+      "sequence": "AAGCCCAATAAACCACTCTGACTGGCCGAATAGGGATATAGGCAACGACATGTGCGGCGACCCTTGCGACAGTGACGCTTTCGCCGTTGCCTGAACCTATTTGAAGGAGTCTAGCAGCCGCAGTAAGGCACAATACCTCTTCCGTGTTACCAGACCAAACAATACGTCCTCTTCAATGTTTAAATGACCCTCTCGTCATAAAACCTGTCTACTATGTGTTCCGCAAGAATCAACAACTACAATGGCGCGTCGTGAATAACGCGACGGCTGAGACGAACGGCGCGTGAATGAAGCGCTTAAACAGCTCAGGAGCCAGTCCCCTACGCCGCATATCCTGGCCACTGGAGGTGAAGCGAATGGTATCGATACGTAGGAGGTGTGCCTTCTTAGGCTGTTACTCAGGACGCCCAAATATTCTTTCCAATCCTACTTATGTTTCTTGCGTCGTAGCGGGACCCTCCATTGTTACTTATTAGGTTCTCGTTATATCTCATAATCTC"
+    },
+    {
+      "branch_duration": 1.0,
+      "children": [
+        "leaf_15",
+        "leaf_16"
+      ],
+      "depth": 3,
+      "expected_substitutions": 2.69171128766611,
+      "genetic_change": 0.00538342257533222,
+      "id": "node_14",
+      "is_terminal": false,
+      "lineage_rate": 0.00538342257533222,
+      "mutations_from_parent": [],
+      "name": null,
+      "observed_substitutions": 0,
+      "parent": "node_10",
+      "sequence": "AAGCCCAATAAACCACTCTGACTGGCCGAATAGGGATATAGGCAACGACATGTGCGGCGACCCTTGCGACAGTGACGCTTTCGCCGTTGCCTGAACCTATTTGAAGGAGTCTAGCAGCCGCAGTAAGGCACAATACCTCGTCCGTGTTACCAGACCAAACAATACGTCCTCTTCAATGTTTAAATGACCCTCTCGTCATAAAACCTGTCTACTATGTGTTCCGCAAGAATCAACAACTACAATGGCGCGTCGTGAATAACGCGACGGCTGAGACGAACGGCGCGTGAATGAAGCGCTTAAACAGCTCAGGAGCCAGTCCCCTACGCCGCATATCCTGGCCACTGGAGGTGAAGCGAATGGTATCGATACGTAGGAGGTGTGCCTTCGTAGGCTGTTACTCAGGACGCCCAACTATTCTTTCCAATCCTACATATGTTTCTTGCGTCGTAGCGGGACCCTCCATTGTTACTTATTAGGTTCTCGTTATGTCTCATAATCTC"
+    },
+    {
+      "branch_duration": 1.0,
+      "children": [],
+      "depth": 4,
+      "expected_substitutions": 3.6132750434575693,
+      "genetic_change": 0.007226550086915138,
+      "id": "leaf_15",
+      "is_terminal": true,
+      "lineage_rate": 0.007226550086915138,
+      "mutations_from_parent": [
+        {
+          "ancestral_base": "G",
+          "derived_base": "C",
+          "position": 55
+        },
+        {
+          "ancestral_base": "T",
+          "derived_base": "A",
+          "position": 97
+        },
+        {
+          "ancestral_base": "A",
+          "derived_base": "C",
+          "position": 182
+        },
+        {
+          "ancestral_base": "G",
+          "derived_base": "A",
+          "position": 309
+        }
+      ],
+      "name": "Taxon_7",
+      "observed_substitutions": 4,
+      "parent": "node_14",
+      "sequence": "AAGCCCAATAAACCACTCTGACTGGCCGAATAGGGATATAGGCAACGACATGTGCCGCGACCCTTGCGACAGTGACGCTTTCGCCGTTGCCTGAACCAATTTGAAGGAGTCTAGCAGCCGCAGTAAGGCACAATACCTCGTCCGTGTTACCAGACCAAACAATACGTCCTCTTCAATGTTTACATGACCCTCTCGTCATAAAACCTGTCTACTATGTGTTCCGCAAGAATCAACAACTACAATGGCGCGTCGTGAATAACGCGACGGCTGAGACGAACGGCGCGTGAATGAAGCGCTTAAACAGCTCAGAAGCCAGTCCCCTACGCCGCATATCCTGGCCACTGGAGGTGAAGCGAATGGTATCGATACGTAGGAGGTGTGCCTTCGTAGGCTGTTACTCAGGACGCCCAACTATTCTTTCCAATCCTACATATGTTTCTTGCGTCGTAGCGGGACCCTCCATTGTTACTTATTAGGTTCTCGTTATGTCTCATAATCTC"
+    },
+    {
+      "branch_duration": 1.0,
+      "children": [],
+      "depth": 4,
+      "expected_substitutions": 2.882700594739286,
+      "genetic_change": 0.0057654011894785724,
+      "id": "leaf_16",
+      "is_terminal": true,
+      "lineage_rate": 0.0057654011894785724,
+      "mutations_from_parent": [
+        {
+          "ancestral_base": "C",
+          "derived_base": "G",
+          "position": 128
+        },
+        {
+          "ancestral_base": "T",
+          "derived_base": "A",
+          "position": 360
+        },
+        {
+          "ancestral_base": "T",
+          "derived_base": "G",
+          "position": 418
+        },
+        {
+          "ancestral_base": "T",
+          "derived_base": "G",
+          "position": 433
+        }
+      ],
+      "name": "Taxon_8",
+      "observed_substitutions": 4,
+      "parent": "node_14",
+      "sequence": "AAGCCCAATAAACCACTCTGACTGGCCGAATAGGGATATAGGCAACGACATGTGCGGCGACCCTTGCGACAGTGACGCTTTCGCCGTTGCCTGAACCTATTTGAAGGAGTCTAGCAGCCGCAGTAAGGGACAATACCTCGTCCGTGTTACCAGACCAAACAATACGTCCTCTTCAATGTTTAAATGACCCTCTCGTCATAAAACCTGTCTACTATGTGTTCCGCAAGAATCAACAACTACAATGGCGCGTCGTGAATAACGCGACGGCTGAGACGAACGGCGCGTGAATGAAGCGCTTAAACAGCTCAGGAGCCAGTCCCCTACGCCGCATATCCTGGCCACTGGAGGTGAAGCGAATGGAATCGATACGTAGGAGGTGTGCCTTCGTAGGCTGTTACTCAGGACGCCCAACTATTCTGTCCAATCCTACATAGGTTTCTTGCGTCGTAGCGGGACCCTCCATTGTTACTTATTAGGTTCTCGTTATGTCTCATAATCTC"
+    },
+    {
+      "branch_duration": 1.0,
+      "children": [
+        "node_18",
+        "node_25"
+      ],
+      "depth": 1,
+      "expected_substitutions": 6.034555713955313,
+      "genetic_change": 0.012069111427910626,
+      "id": "node_17",
+      "is_terminal": false,
+      "lineage_rate": 0.012069111427910626,
+      "mutations_from_parent": [
+        {
+          "ancestral_base": "T",
+          "derived_base": "A",
+          "position": 16
+        },
+        {
+          "ancestral_base": "A",
+          "derived_base": "G",
+          "position": 28
+        },
+        {
+          "ancestral_base": "A",
+          "derived_base": "C",
+          "position": 129
+        },
+        {
+          "ancestral_base": "A",
+          "derived_base": "G",
+          "position": 182
+        },
+        {
+          "ancestral_base": "G",
+          "derived_base": "C",
+          "position": 308
+        },
+        {
+          "ancestral_base": "C",
+          "derived_base": "G",
+          "position": 320
+        },
+        {
+          "ancestral_base": "A",
+          "derived_base": "T",
+          "position": 367
+        }
+      ],
+      "name": null,
+      "observed_substitutions": 7,
+      "parent": "node_1",
+      "sequence": "AAGCCCAATAAACCACACTGACTGGCCGGATAGGGATATAGGCAACGACATGTGCGGCGACCCTTGCGACAGTGACGCTTTCGCCGTTGCCTAAACCTATTTGAAGGAGTCTAGCAGCCGCAGTAAGGCCCAATACCTCGTCCGTGTTACCAGACCAAACAAGACGTCCTCTTCAATGTTTAGATGACCCTCTCGTCATAAAACCTTTCTACTATGTGTTCCGCAAGAATCAACAACTACAATGGCGCGTCGTGAATAACGCGACGGCTGAGACGAACGGCGCGTGAATGAAGCGCTTAAACAGCTCACGAGCCAGTCCCGTACGTCGCATATCCTGGCCACTGGAGGTGAAGCGAATGGTATCGATTCGTAGGAGGTGTGCCTTCGTAGGCTGTTTCTCAGGACGCCCAACTATTCTTTCCAATCCTACATCTGTTTCTTGCGTCGTAGCGGGACCCTCCATTGTTACTTATTAGGTTCTCGTTATGTCTCATAATCTC"
+    },
+    {
+      "branch_duration": 1.0,
+      "children": [
+        "node_19",
+        "node_22"
+      ],
+      "depth": 2,
+      "expected_substitutions": 8.518371940589587,
+      "genetic_change": 0.017036743881179175,
+      "id": "node_18",
+      "is_terminal": false,
+      "lineage_rate": 0.017036743881179175,
+      "mutations_from_parent": [
+        {
+          "ancestral_base": "A",
+          "derived_base": "G",
+          "position": 74
+        },
+        {
+          "ancestral_base": "T",
+          "derived_base": "C",
+          "position": 86
+        },
+        {
+          "ancestral_base": "T",
+          "derived_base": "A",
+          "position": 146
+        },
+        {
+          "ancestral_base": "T",
+          "derived_base": "A",
+          "position": 207
+        },
+        {
+          "ancestral_base": "G",
+          "derived_base": "C",
+          "position": 279
+        },
+        {
+          "ancestral_base": "T",
+          "derived_base": "C",
+          "position": 296
+        },
+        {
+          "ancestral_base": "T",
+          "derived_base": "C",
+          "position": 348
+        },
+        {
+          "ancestral_base": "T",
+          "derived_base": "C",
+          "position": 398
+        },
+        {
+          "ancestral_base": "T",
+          "derived_base": "A",
+          "position": 440
+        }
+      ],
+      "name": null,
+      "observed_substitutions": 9,
+      "parent": "node_17",
+      "sequence": "AAGCCCAATAAACCACACTGACTGGCCGGATAGGGATATAGGCAACGACATGTGCGGCGACCCTTGCGACAGTGGCGCTTTCGCCGCTGCCTAAACCTATTTGAAGGAGTCTAGCAGCCGCAGTAAGGCCCAATACCTCGTCCGTGATACCAGACCAAACAAGACGTCCTCTTCAATGTTTAGATGACCCTCTCGTCATAAAACCTTACTACTATGTGTTCCGCAAGAATCAACAACTACAATGGCGCGTCGTGAATAACGCGACGGCTGAGACGAACGCCGCGTGAATGAAGCGCCTAAACAGCTCACGAGCCAGTCCCGTACGTCGCATATCCTGGCCACTGGAGGCGAAGCGAATGGTATCGATTCGTAGGAGGTGTGCCTTCGTAGGCTGTTTCCCAGGACGCCCAACTATTCTTTCCAATCCTACATCTGTTTCTAGCGTCGTAGCGGGACCCTCCATTGTTACTTATTAGGTTCTCGTTATGTCTCATAATCTC"
+    },
+    {
+      "branch_duration": 1.0,
+      "children": [
+        "leaf_20",
+        "leaf_21"
+      ],
+      "depth": 3,
+      "expected_substitutions": 9.940968136962294,
+      "genetic_change": 0.019881936273924587,
+      "id": "node_19",
+      "is_terminal": false,
+      "lineage_rate": 0.019881936273924587,
+      "mutations_from_parent": [
+        {
+          "ancestral_base": "A",
+          "derived_base": "T",
+          "position": 7
+        },
+        {
+          "ancestral_base": "C",
+          "derived_base": "G",
+          "position": 17
+        },
+        {
+          "ancestral_base": "G",
+          "derived_base": "C",
+          "position": 73
+        },
+        {
+          "ancestral_base": "G",
+          "derived_base": "C",
+          "position": 105
+        },
+        {
+          "ancestral_base": "C",
+          "derived_base": "T",
+          "position": 142
+        },
+        {
+          "ancestral_base": "A",
+          "derived_base": "T",
+          "position": 199
+        },
+        {
+          "ancestral_base": "C",
+          "derived_base": "G",
+          "position": 267
+        },
+        {
+          "ancestral_base": "T",
+          "derived_base": "G",
+          "position": 297
+        },
+        {
+          "ancestral_base": "G",
+          "derived_base": "A",
+          "position": 327
+        },
+        {
+          "ancestral_base": "G",
+          "derived_base": "T",
+          "position": 337
+        },
+        {
+          "ancestral_base": "T",
+          "derived_base": "A",
+          "position": 377
+        },
+        {
+          "ancestral_base": "C",
+          "derived_base": "G",
+          "position": 407
+        },
+        {
+          "ancestral_base": "T",
+          "derived_base": "C",
+          "position": 466
+        },
+        {
+          "ancestral_base": "T",
+          "derived_base": "C",
+          "position": 473
+        },
+        {
+          "ancestral_base": "A",
+          "derived_base": "G",
+          "position": 495
+        }
+      ],
+      "name": null,
+      "observed_substitutions": 15,
+      "parent": "node_18",
+      "sequence": "AAGCCCATTAAACCACAGTGACTGGCCGGATAGGGATATAGGCAACGACATGTGCGGCGACCCTTGCGACAGTCGCGCTTTCGCCGCTGCCTAAACCTATTTGAACGAGTCTAGCAGCCGCAGTAAGGCCCAATACCTCGTCTGTGATACCAGACCAAACAAGACGTCCTCTTCAATGTTTAGATGACCCTCTCGTCATTAAACCTTACTACTATGTGTTCCGCAAGAATCAACAACTACAATGGCGCGTCGTGAATAACGCGACGGGTGAGACGAACGCCGCGTGAATGAAGCGCCGAAACAGCTCACGAGCCAGTCCCGTACGTCACATATCCTGTCCACTGGAGGCGAAGCGAATGGTATCGATTCGTAGGAGGAGTGCCTTCGTAGGCTGTTTCCCAGGACGCGCAACTATTCTTTCCAATCCTACATCTGTTTCTAGCGTCGTAGCGGGACCCTCCATTGTCACTTATCAGGTTCTCGTTATGTCTCATAGTCTC"
+    },
+    {
+      "branch_duration": 1.0,
+      "children": [],
+      "depth": 4,
+      "expected_substitutions": 9.176193351240128,
+      "genetic_change": 0.018352386702480256,
+      "id": "leaf_20",
+      "is_terminal": true,
+      "lineage_rate": 0.018352386702480256,
+      "mutations_from_parent": [
+        {
+          "ancestral_base": "A",
+          "derived_base": "T",
+          "position": 43
+        },
+        {
+          "ancestral_base": "G",
+          "derived_base": "C",
+          "position": 58
+        },
+        {
+          "ancestral_base": "C",
+          "derived_base": "G",
+          "position": 60
+        },
+        {
+          "ancestral_base": "T",
+          "derived_base": "A",
+          "position": 209
+        },
+        {
+          "ancestral_base": "C",
+          "derived_base": "T",
+          "position": 399
+        }
+      ],
+      "name": "Taxon_9",
+      "observed_substitutions": 5,
+      "parent": "node_19",
+      "sequence": "AAGCCCATTAAACCACAGTGACTGGCCGGATAGGGATATAGGCTACGACATGTGCGGCCAGCCTTGCGACAGTCGCGCTTTCGCCGCTGCCTAAACCTATTTGAACGAGTCTAGCAGCCGCAGTAAGGCCCAATACCTCGTCTGTGATACCAGACCAAACAAGACGTCCTCTTCAATGTTTAGATGACCCTCTCGTCATTAAACCTTACAACTATGTGTTCCGCAAGAATCAACAACTACAATGGCGCGTCGTGAATAACGCGACGGGTGAGACGAACGCCGCGTGAATGAAGCGCCGAAACAGCTCACGAGCCAGTCCCGTACGTCACATATCCTGTCCACTGGAGGCGAAGCGAATGGTATCGATTCGTAGGAGGAGTGCCTTCGTAGGCTGTTTCCTAGGACGCGCAACTATTCTTTCCAATCCTACATCTGTTTCTAGCGTCGTAGCGGGACCCTCCATTGTCACTTATCAGGTTCTCGTTATGTCTCATAGTCTC"
+    },
+    {
+      "branch_duration": 1.0,
+      "children": [],
+      "depth": 4,
+      "expected_substitutions": 9.672580210189585,
+      "genetic_change": 0.01934516042037917,
+      "id": "leaf_21",
+      "is_terminal": true,
+      "lineage_rate": 0.01934516042037917,
+      "mutations_from_parent": [
+        {
+          "ancestral_base": "A",
+          "derived_base": "G",
+          "position": 11
+        },
+        {
+          "ancestral_base": "T",
+          "derived_base": "A",
+          "position": 147
+        },
+        {
+          "ancestral_base": "C",
+          "derived_base": "T",
+          "position": 187
+        },
+        {
+          "ancestral_base": "A",
+          "derived_base": "C",
+          "position": 235
+        },
+        {
+          "ancestral_base": "T",
+          "derived_base": "A",
+          "position": 379
+        },
+        {
+          "ancestral_base": "T",
+          "derived_base": "G",
+          "position": 478
+        }
+      ],
+      "name": "Taxon_10",
+      "observed_substitutions": 6,
+      "parent": "node_19",
+      "sequence": "AAGCCCATTAAGCCACAGTGACTGGCCGGATAGGGATATAGGCAACGACATGTGCGGCGACCCTTGCGACAGTCGCGCTTTCGCCGCTGCCTAAACCTATTTGAACGAGTCTAGCAGCCGCAGTAAGGCCCAATACCTCGTCTGTGAAACCAGACCAAACAAGACGTCCTCTTCAATGTTTAGATGATCCTCTCGTCATTAAACCTTACTACTATGTGTTCCGCAAGAATCAACACCTACAATGGCGCGTCGTGAATAACGCGACGGGTGAGACGAACGCCGCGTGAATGAAGCGCCGAAACAGCTCACGAGCCAGTCCCGTACGTCACATATCCTGTCCACTGGAGGCGAAGCGAATGGTATCGATTCGTAGGAGGAGAGCCTTCGTAGGCTGTTTCCCAGGACGCGCAACTATTCTTTCCAATCCTACATCTGTTTCTAGCGTCGTAGCGGGACCCTCCATTGTCACTTATCAGGTGCTCGTTATGTCTCATAGTCTC"
+    },
+    {
+      "branch_duration": 1.0,
+      "children": [
+        "leaf_23",
+        "leaf_24"
+      ],
+      "depth": 3,
+      "expected_substitutions": 11.593593679232411,
+      "genetic_change": 0.023187187358464822,
+      "id": "node_22",
+      "is_terminal": false,
+      "lineage_rate": 0.023187187358464822,
+      "mutations_from_parent": [
+        {
+          "ancestral_base": "C",
+          "derived_base": "G",
+          "position": 15
+        },
+        {
+          "ancestral_base": "G",
+          "derived_base": "T",
+          "position": 19
+        },
+        {
+          "ancestral_base": "T",
+          "derived_base": "C",
+          "position": 109
+        },
+        {
+          "ancestral_base": "C",
+          "derived_base": "G",
+          "position": 117
+        },
+        {
+          "ancestral_base": "A",
+          "derived_base": "T",
+          "position": 153
+        },
+        {
+          "ancestral_base": "G",
+          "derived_base": "C",
+          "position": 177
+        },
+        {
+          "ancestral_base": "T",
+          "derived_base": "A",
+          "position": 190
+        },
+        {
+          "ancestral_base": "G",
+          "derived_base": "C",
+          "position": 253
+        },
+        {
+          "ancestral_base": "C",
+          "derived_base": "A",
+          "position": 312
+        },
+        {
+          "ancestral_base": "C",
+          "derived_base": "G",
+          "position": 368
+        },
+        {
+          "ancestral_base": "G",
+          "derived_base": "T",
+          "position": 372
+        },
+        {
+          "ancestral_base": "T",
+          "derived_base": "C",
+          "position": 414
+        },
+        {
+          "ancestral_base": "A",
+          "derived_base": "C",
+          "position": 474
+        },
+        {
+          "ancestral_base": "G",
+          "derived_base": "C",
+          "position": 475
+        }
+      ],
+      "name": null,
+      "observed_substitutions": 14,
+      "parent": "node_18",
+      "sequence": "AAGCCCAATAAACCAGACTTACTGGCCGGATAGGGATATAGGCAACGACATGTGCGGCGACCCTTGCGACAGTGGCGCTTTCGCCGCTGCCTAAACCTATTTGAAGGAGCCTAGCAGGCGCAGTAAGGCCCAATACCTCGTCCGTGATACCAGTCCAAACAAGACGTCCTCTTCAATCTTTAGATGACCCACTCGTCATAAAACCTTACTACTATGTGTTCCGCAAGAATCAACAACTACAATGGCGCGTCGTCAATAACGCGACGGCTGAGACGAACGCCGCGTGAATGAAGCGCCTAAACAGCTCACGAGACAGTCCCGTACGTCGCATATCCTGGCCACTGGAGGCGAAGCGAATGGTATCGATTGGTATGAGGTGTGCCTTCGTAGGCTGTTTCCCAGGACGCCCAACTACTCTTTCCAATCCTACATCTGTTTCTAGCGTCGTAGCGGGACCCTCCATTGTTACTTATTCCGTTCTCGTTATGTCTCATAATCTC"
+    },
+    {
+      "branch_duration": 1.0,
+      "children": [],
+      "depth": 4,
+      "expected_substitutions": 13.153698297518016,
+      "genetic_change": 0.02630739659503603,
+      "id": "leaf_23",
+      "is_terminal": true,
+      "lineage_rate": 0.02630739659503603,
+      "mutations_from_parent": [
+        {
+          "ancestral_base": "C",
+          "derived_base": "G",
+          "position": 60
+        },
+        {
+          "ancestral_base": "G",
+          "derived_base": "T",
+          "position": 76
+        },
+        {
+          "ancestral_base": "A",
+          "derived_base": "C",
+          "position": 112
+        },
+        {
+          "ancestral_base": "G",
+          "derived_base": "C",
+          "position": 165
+        },
+        {
+          "ancestral_base": "T",
+          "derived_base": "C",
+          "position": 184
+        },
+        {
+          "ancestral_base": "A",
+          "derived_base": "C",
+          "position": 202
+        },
+        {
+          "ancestral_base": "A",
+          "derived_base": "G",
+          "position": 275
+        },
+        {
+          "ancestral_base": "G",
+          "derived_base": "T",
+          "position": 346
+        },
+        {
+          "ancestral_base": "A",
+          "derived_base": "G",
+          "position": 351
+        },
+        {
+          "ancestral_base": "T",
+          "derived_base": "A",
+          "position": 396
+        },
+        {
+          "ancestral_base": "A",
+          "derived_base": "G",
+          "position": 461
+        }
+      ],
+      "name": "Taxon_11",
+      "observed_substitutions": 11,
+      "parent": "node_22",
+      "sequence": "AAGCCCAATAAACCAGACTTACTGGCCGGATAGGGATATAGGCAACGACATGTGCGGCGAGCCTTGCGACAGTGGCTCTTTCGCCGCTGCCTAAACCTATTTGAAGGAGCCTCGCAGGCGCAGTAAGGCCCAATACCTCGTCCGTGATACCAGTCCAAACAAGACCTCCTCTTCAATCTTTAGACGACCCACTCGTCATAAACCCTTACTACTATGTGTTCCGCAAGAATCAACAACTACAATGGCGCGTCGTCAATAACGCGACGGCTGAGACGGACGCCGCGTGAATGAAGCGCCTAAACAGCTCACGAGACAGTCCCGTACGTCGCATATCCTGGCCACTGGATGCGAGGCGAATGGTATCGATTGGTATGAGGTGTGCCTTCGTAGGCTGTTACCCAGGACGCCCAACTACTCTTTCCAATCCTACATCTGTTTCTAGCGTCGTAGCGGGACCCTCCGTTGTTACTTATTCCGTTCTCGTTATGTCTCATAATCTC"
+    },
+    {
+      "branch_duration": 1.0,
+      "children": [],
+      "depth": 4,
+      "expected_substitutions": 6.7200020493626536,
+      "genetic_change": 0.013440004098725308,
+      "id": "leaf_24",
+      "is_terminal": true,
+      "lineage_rate": 0.013440004098725308,
+      "mutations_from_parent": [
+        {
+          "ancestral_base": "C",
+          "derived_base": "G",
+          "position": 26
+        },
+        {
+          "ancestral_base": "C",
+          "derived_base": "G",
+          "position": 223
+        },
+        {
+          "ancestral_base": "C",
+          "derived_base": "T",
+          "position": 301
+        },
+        {
+          "ancestral_base": "A",
+          "derived_base": "C",
+          "position": 428
+        }
+      ],
+      "name": "Taxon_12",
+      "observed_substitutions": 4,
+      "parent": "node_22",
+      "sequence": "AAGCCCAATAAACCAGACTTACTGGCGGGATAGGGATATAGGCAACGACATGTGCGGCGACCCTTGCGACAGTGGCGCTTTCGCCGCTGCCTAAACCTATTTGAAGGAGCCTAGCAGGCGCAGTAAGGCCCAATACCTCGTCCGTGATACCAGTCCAAACAAGACGTCCTCTTCAATCTTTAGATGACCCACTCGTCATAAAACCTTACTACTATGTGTTCCGGAAGAATCAACAACTACAATGGCGCGTCGTCAATAACGCGACGGCTGAGACGAACGCCGCGTGAATGAAGCGCCTAAATAGCTCACGAGACAGTCCCGTACGTCGCATATCCTGGCCACTGGAGGCGAAGCGAATGGTATCGATTGGTATGAGGTGTGCCTTCGTAGGCTGTTTCCCAGGACGCCCAACTACTCTTTCCAATCCTCCATCTGTTTCTAGCGTCGTAGCGGGACCCTCCATTGTTACTTATTCCGTTCTCGTTATGTCTCATAATCTC"
+    },
+    {
+      "branch_duration": 1.0,
+      "children": [
+        "node_26",
+        "node_29"
+      ],
+      "depth": 2,
+      "expected_substitutions": 6.037254822890609,
+      "genetic_change": 0.012074509645781217,
+      "id": "node_25",
+      "is_terminal": false,
+      "lineage_rate": 0.012074509645781217,
+      "mutations_from_parent": [
+        {
+          "ancestral_base": "G",
+          "derived_base": "T",
+          "position": 53
+        },
+        {
+          "ancestral_base": "A",
+          "derived_base": "G",
+          "position": 197
+        },
+        {
+          "ancestral_base": "C",
+          "derived_base": "T",
+          "position": 203
+        },
+        {
+          "ancestral_base": "A",
+          "derived_base": "C",
+          "position": 388
+        },
+        {
+          "ancestral_base": "T",
+          "derived_base": "G",
+          "position": 478
+        }
+      ],
+      "name": null,
+      "observed_substitutions": 5,
+      "parent": "node_17",
+      "sequence": "AAGCCCAATAAACCACACTGACTGGCCGGATAGGGATATAGGCAACGACATGTTCGGCGACCCTTGCGACAGTGACGCTTTCGCCGTTGCCTAAACCTATTTGAAGGAGTCTAGCAGCCGCAGTAAGGCCCAATACCTCGTCCGTGTTACCAGACCAAACAAGACGTCCTCTTCAATGTTTAGATGACCCTCTCGTCGTAAAATCTTTCTACTATGTGTTCCGCAAGAATCAACAACTACAATGGCGCGTCGTGAATAACGCGACGGCTGAGACGAACGGCGCGTGAATGAAGCGCTTAAACAGCTCACGAGCCAGTCCCGTACGTCGCATATCCTGGCCACTGGAGGTGAAGCGAATGGTATCGATTCGTAGGAGGTGTGCCTTCGTCGGCTGTTTCTCAGGACGCCCAACTATTCTTTCCAATCCTACATCTGTTTCTTGCGTCGTAGCGGGACCCTCCATTGTTACTTATTAGGTGCTCGTTATGTCTCATAATCTC"
+    },
+    {
+      "branch_duration": 1.0,
+      "children": [
+        "leaf_27",
+        "leaf_28"
+      ],
+      "depth": 3,
+      "expected_substitutions": 5.28024322428706,
+      "genetic_change": 0.01056048644857412,
+      "id": "node_26",
+      "is_terminal": false,
+      "lineage_rate": 0.01056048644857412,
+      "mutations_from_parent": [
+        {
+          "ancestral_base": "C",
+          "derived_base": "A",
+          "position": 13
+        },
+        {
+          "ancestral_base": "A",
+          "derived_base": "T",
+          "position": 70
+        },
+        {
+          "ancestral_base": "G",
+          "derived_base": "T",
+          "position": 324
+        },
+        {
+          "ancestral_base": "A",
+          "derived_base": "T",
+          "position": 331
+        },
+        {
+          "ancestral_base": "G",
+          "derived_base": "A",
+          "position": 386
+        },
+        {
+          "ancestral_base": "A",
+          "derived_base": "T",
+          "position": 448
+        }
+      ],
+      "name": null,
+      "observed_substitutions": 6,
+      "parent": "node_25",
+      "sequence": "AAGCCCAATAAACAACACTGACTGGCCGGATAGGGATATAGGCAACGACATGTTCGGCGACCCTTGCGACTGTGACGCTTTCGCCGTTGCCTAAACCTATTTGAAGGAGTCTAGCAGCCGCAGTAAGGCCCAATACCTCGTCCGTGTTACCAGACCAAACAAGACGTCCTCTTCAATGTTTAGATGACCCTCTCGTCGTAAAATCTTTCTACTATGTGTTCCGCAAGAATCAACAACTACAATGGCGCGTCGTGAATAACGCGACGGCTGAGACGAACGGCGCGTGAATGAAGCGCTTAAACAGCTCACGAGCCAGTCCCGTACTTCGCATTTCCTGGCCACTGGAGGTGAAGCGAATGGTATCGATTCGTAGGAGGTGTGCCTTCATCGGCTGTTTCTCAGGACGCCCAACTATTCTTTCCAATCCTACATCTGTTTCTTGCGTCGTTGCGGGACCCTCCATTGTTACTTATTAGGTGCTCGTTATGTCTCATAATCTC"
+    },
+    {
+      "branch_duration": 1.0,
+      "children": [],
+      "depth": 4,
+      "expected_substitutions": 2.619190246933024,
+      "genetic_change": 0.005238380493866048,
+      "id": "leaf_27",
+      "is_terminal": true,
+      "lineage_rate": 0.005238380493866048,
+      "mutations_from_parent": [
+        {
+          "ancestral_base": "T",
+          "derived_base": "G",
+          "position": 30
+        },
+        {
+          "ancestral_base": "T",
+          "derived_base": "G",
+          "position": 377
+        }
+      ],
+      "name": "Taxon_13",
+      "observed_substitutions": 2,
+      "parent": "node_26",
+      "sequence": "AAGCCCAATAAACAACACTGACTGGCCGGAGAGGGATATAGGCAACGACATGTTCGGCGACCCTTGCGACTGTGACGCTTTCGCCGTTGCCTAAACCTATTTGAAGGAGTCTAGCAGCCGCAGTAAGGCCCAATACCTCGTCCGTGTTACCAGACCAAACAAGACGTCCTCTTCAATGTTTAGATGACCCTCTCGTCGTAAAATCTTTCTACTATGTGTTCCGCAAGAATCAACAACTACAATGGCGCGTCGTGAATAACGCGACGGCTGAGACGAACGGCGCGTGAATGAAGCGCTTAAACAGCTCACGAGCCAGTCCCGTACTTCGCATTTCCTGGCCACTGGAGGTGAAGCGAATGGTATCGATTCGTAGGAGGGGTGCCTTCATCGGCTGTTTCTCAGGACGCCCAACTATTCTTTCCAATCCTACATCTGTTTCTTGCGTCGTTGCGGGACCCTCCATTGTTACTTATTAGGTGCTCGTTATGTCTCATAATCTC"
+    },
+    {
+      "branch_duration": 1.0,
+      "children": [],
+      "depth": 4,
+      "expected_substitutions": 6.354632141549201,
+      "genetic_change": 0.012709264283098402,
+      "id": "leaf_28",
+      "is_terminal": true,
+      "lineage_rate": 0.012709264283098402,
+      "mutations_from_parent": [
+        {
+          "ancestral_base": "A",
+          "derived_base": "G",
+          "position": 7
+        },
+        {
+          "ancestral_base": "G",
+          "derived_base": "A",
+          "position": 76
+        },
+        {
+          "ancestral_base": "T",
+          "derived_base": "A",
+          "position": 123
+        },
+        {
+          "ancestral_base": "A",
+          "derived_base": "C",
+          "position": 231
+        },
+        {
+          "ancestral_base": "C",
+          "derived_base": "G",
+          "position": 323
+        },
+        {
+          "ancestral_base": "G",
+          "derived_base": "C",
+          "position": 327
+        },
+        {
+          "ancestral_base": "G",
+          "derived_base": "A",
+          "position": 369
+        },
+        {
+          "ancestral_base": "A",
+          "derived_base": "C",
+          "position": 422
+        },
+        {
+          "ancestral_base": "T",
+          "derived_base": "C",
+          "position": 486
+        }
+      ],
+      "name": "Taxon_14",
+      "observed_substitutions": 9,
+      "parent": "node_26",
+      "sequence": "AAGCCCAGTAAACAACACTGACTGGCCGGATAGGGATATAGGCAACGACATGTTCGGCGACCCTTGCGACTGTGACACTTTCGCCGTTGCCTAAACCTATTTGAAGGAGTCTAGCAGCCGCAGAAAGGCCCAATACCTCGTCCGTGTTACCAGACCAAACAAGACGTCCTCTTCAATGTTTAGATGACCCTCTCGTCGTAAAATCTTTCTACTATGTGTTCCGCAAGAATCCACAACTACAATGGCGCGTCGTGAATAACGCGACGGCTGAGACGAACGGCGCGTGAATGAAGCGCTTAAACAGCTCACGAGCCAGTCCCGTAGTTCCCATTTCCTGGCCACTGGAGGTGAAGCGAATGGTATCGATTCATAGGAGGTGTGCCTTCATCGGCTGTTTCTCAGGACGCCCAACTATTCTTTCCCATCCTACATCTGTTTCTTGCGTCGTTGCGGGACCCTCCATTGTTACTTATTAGGTGCTCGTTACGTCTCATAATCTC"
+    },
+    {
+      "branch_duration": 1.0,
+      "children": [
+        "leaf_30",
+        "leaf_31"
+      ],
+      "depth": 3,
+      "expected_substitutions": 5.62857537619912,
+      "genetic_change": 0.011257150752398241,
+      "id": "node_29",
+      "is_terminal": false,
+      "lineage_rate": 0.011257150752398241,
+      "mutations_from_parent": [
+        {
+          "ancestral_base": "C",
+          "derived_base": "T",
+          "position": 83
+        },
+        {
+          "ancestral_base": "G",
+          "derived_base": "A",
+          "position": 105
+        },
+        {
+          "ancestral_base": "T",
+          "derived_base": "A",
+          "position": 205
+        },
+        {
+          "ancestral_base": "A",
+          "derived_base": "C",
+          "position": 210
+        },
+        {
+          "ancestral_base": "A",
+          "derived_base": "G",
+          "position": 270
+        },
+        {
+          "ancestral_base": "G",
+          "derived_base": "C",
+          "position": 311
+        },
+        {
+          "ancestral_base": "G",
+          "derived_base": "C",
+          "position": 443
+        }
+      ],
+      "name": null,
+      "observed_substitutions": 7,
+      "parent": "node_25",
+      "sequence": "AAGCCCAATAAACCACACTGACTGGCCGGATAGGGATATAGGCAACGACATGTTCGGCGACCCTTGCGACAGTGACGCTTTCGTCGTTGCCTAAACCTATTTGAAAGAGTCTAGCAGCCGCAGTAAGGCCCAATACCTCGTCCGTGTTACCAGACCAAACAAGACGTCCTCTTCAATGTTTAGATGACCCTCTCGTCGTAAAATCATTCTCCTATGTGTTCCGCAAGAATCAACAACTACAATGGCGCGTCGTGAATAACGCGACGGCTGGGACGAACGGCGCGTGAATGAAGCGCTTAAACAGCTCACGACCCAGTCCCGTACGTCGCATATCCTGGCCACTGGAGGTGAAGCGAATGGTATCGATTCGTAGGAGGTGTGCCTTCGTCGGCTGTTTCTCAGGACGCCCAACTATTCTTTCCAATCCTACATCTGTTTCTTGCCTCGTAGCGGGACCCTCCATTGTTACTTATTAGGTGCTCGTTATGTCTCATAATCTC"
+    },
+    {
+      "branch_duration": 1.0,
+      "children": [],
+      "depth": 4,
+      "expected_substitutions": 5.171555658696457,
+      "genetic_change": 0.010343111317392914,
+      "id": "leaf_30",
+      "is_terminal": true,
+      "lineage_rate": 0.010343111317392914,
+      "mutations_from_parent": [
+        {
+          "ancestral_base": "T",
+          "derived_base": "A",
+          "position": 111
+        },
+        {
+          "ancestral_base": "T",
+          "derived_base": "G",
+          "position": 219
+        },
+        {
+          "ancestral_base": "C",
+          "derived_base": "G",
+          "position": 318
+        },
+        {
+          "ancestral_base": "A",
+          "derived_base": "T",
+          "position": 365
+        },
+        {
+          "ancestral_base": "G",
+          "derived_base": "A",
+          "position": 449
+        }
+      ],
+      "name": "Taxon_15",
+      "observed_substitutions": 5,
+      "parent": "node_29",
+      "sequence": "AAGCCCAATAAACCACACTGACTGGCCGGATAGGGATATAGGCAACGACATGTTCGGCGACCCTTGCGACAGTGACGCTTTCGTCGTTGCCTAAACCTATTTGAAAGAGTCAAGCAGCCGCAGTAAGGCCCAATACCTCGTCCGTGTTACCAGACCAAACAAGACGTCCTCTTCAATGTTTAGATGACCCTCTCGTCGTAAAATCATTCTCCTATGTGTGCCGCAAGAATCAACAACTACAATGGCGCGTCGTGAATAACGCGACGGCTGGGACGAACGGCGCGTGAATGAAGCGCTTAAACAGCTCACGACCCAGTCGCGTACGTCGCATATCCTGGCCACTGGAGGTGAAGCGAATGGTATCGTTTCGTAGGAGGTGTGCCTTCGTCGGCTGTTTCTCAGGACGCCCAACTATTCTTTCCAATCCTACATCTGTTTCTTGCCTCGTAACGGGACCCTCCATTGTTACTTATTAGGTGCTCGTTATGTCTCATAATCTC"
+    },
+    {
+      "branch_duration": 1.0,
+      "children": [],
+      "depth": 4,
+      "expected_substitutions": 6.557286492863907,
+      "genetic_change": 0.013114572985727815,
+      "id": "leaf_31",
+      "is_terminal": true,
+      "lineage_rate": 0.013114572985727815,
+      "mutations_from_parent": [
+        {
+          "ancestral_base": "A",
+          "derived_base": "T",
+          "position": 35
+        },
+        {
+          "ancestral_base": "T",
+          "derived_base": "C",
+          "position": 212
+        },
+        {
+          "ancestral_base": "C",
+          "derived_base": "G",
+          "position": 326
+        },
+        {
+          "ancestral_base": "C",
+          "derived_base": "T",
+          "position": 468
+        }
+      ],
+      "name": "Taxon_16",
+      "observed_substitutions": 4,
+      "parent": "node_29",
+      "sequence": "AAGCCCAATAAACCACACTGACTGGCCGGATAGGGTTATAGGCAACGACATGTTCGGCGACCCTTGCGACAGTGACGCTTTCGTCGTTGCCTAAACCTATTTGAAAGAGTCTAGCAGCCGCAGTAAGGCCCAATACCTCGTCCGTGTTACCAGACCAAACAAGACGTCCTCTTCAATGTTTAGATGACCCTCTCGTCGTAAAATCATTCTCCCATGTGTTCCGCAAGAATCAACAACTACAATGGCGCGTCGTGAATAACGCGACGGCTGGGACGAACGGCGCGTGAATGAAGCGCTTAAACAGCTCACGACCCAGTCCCGTACGTGGCATATCCTGGCCACTGGAGGTGAAGCGAATGGTATCGATTCGTAGGAGGTGTGCCTTCGTCGGCTGTTTCTCAGGACGCCCAACTATTCTTTCCAATCCTACATCTGTTTCTTGCCTCGTAGCGGGACCCTCCATTGTTATTTATTAGGTGCTCGTTATGTCTCATAATCTC"
+    }
+  ],
+  "root_sequence": "AAGCCCAATAAACCACTCTGACTGGCCGAATAGGGATATAGGCAACGACATGTGCGGCGACCCTTGCGACAGTGACGCTTTCGCCGTTGCCTAAACCTATTTGAAGGAGTCTAGCAGCCGCAGTAAGGCACAATACCTCGTCCGTGTTACCAGACCAAACAAGACGTCCTCTTCAATGTTTAAATGACCCTCTCGTCATAAAACCTTTCTACTATGTGTTCCGCAAGAATCAACAACTACAATGGCGCGTCGTGAATAACGCGACGGCTGAGACGAACGGCGCGTGAATGAAGCGCTTAAACAGCTCAGGAGCCAGTCCCCTACGTCGCATATCCTGGCCACTGGAGGTGAAGCGAATGGTATCGATACGTAGGAGGTGTGCCTTCGTAGGCTGTTTCTCAGGACGCCCAACTATTCTTTCCAATCCTACATCTGTTTCTTGCGTCGTAGCGGGACCCTCCATTGTTACTTATTAGGTTCTCGTTATGTCTCATAATCTC",
+  "simulation": {
+    "name": "relaxed-clock-example",
+    "random_seed": 42
+  },
+  "summary": {
+    "maximum_lineage_rate": 0.02630739659503603,
+    "mean_lineage_rate": 0.011228215770742274,
+    "minimum_lineage_rate": 0.004448666272436107,
+    "newick_branch_lengths": "genetic_change",
+    "root_rate": 0.01,
+    "sequence_length": 500,
+    "terminal_taxa": 16,
+    "total_expected_substitutions": 168.4232365611341,
+    "total_observed_substitutions": 161
+  },
+  "terminal_sequences": {
+    "Taxon_1": "AAGCCCAATACACCTCTCTGACTGGCCGAATAGGGATATAGGCAACGACATGTGCGGCGACCCTTGCGACAGTGACGCTTTCGCCGTTGCCTGAACCTATTTGAAGGAGTCTAGCAGCCGCAGTAAGGCACAATACCTCGTCCGTGTTACCAGACCAAACAGTACGTCCTCTTCAATGTTTAAATGACCCTCTCGTCATAAAACCTGTCTATTATGTGTTCCGCAAGAATCGACAACTACAATGGCGCGTCGTGAATAACGCGACGGCTGAGACGAACGGAGCGTGAATGAAGCGCTTAAACAGCTCAGGAGCCAGTGCCCTACGTAGCATATACTGGCCACTGGAGGTGAAGCGAATGGTATCAATACGTAGGAGGTGTGCCTTCGTAGGCTGTTTCTCAGGACGCCCAACTATTCTTTCCAATCCTACATATGTTTCTTGCGTCGTAGCGGGACCCTCCATTGTTAGTTATTAGGTTCTCGTTAGGTCTCATAATCTC",
+    "Taxon_10": "AAGCCCATTAAGCCACAGTGACTGGCCGGATAGGGATATAGGCAACGACATGTGCGGCGACCCTTGCGACAGTCGCGCTTTCGCCGCTGCCTAAACCTATTTGAACGAGTCTAGCAGCCGCAGTAAGGCCCAATACCTCGTCTGTGAAACCAGACCAAACAAGACGTCCTCTTCAATGTTTAGATGATCCTCTCGTCATTAAACCTTACTACTATGTGTTCCGCAAGAATCAACACCTACAATGGCGCGTCGTGAATAACGCGACGGGTGAGACGAACGCCGCGTGAATGAAGCGCCGAAACAGCTCACGAGCCAGTCCCGTACGTCACATATCCTGTCCACTGGAGGCGAAGCGAATGGTATCGATTCGTAGGAGGAGAGCCTTCGTAGGCTGTTTCCCAGGACGCGCAACTATTCTTTCCAATCCTACATCTGTTTCTAGCGTCGTAGCGGGACCCTCCATTGTCACTTATCAGGTGCTCGTTATGTCTCATAGTCTC",
+    "Taxon_11": "AAGCCCAATAAACCAGACTTACTGGCCGGATAGGGATATAGGCAACGACATGTGCGGCGAGCCTTGCGACAGTGGCTCTTTCGCCGCTGCCTAAACCTATTTGAAGGAGCCTCGCAGGCGCAGTAAGGCCCAATACCTCGTCCGTGATACCAGTCCAAACAAGACCTCCTCTTCAATCTTTAGACGACCCACTCGTCATAAACCCTTACTACTATGTGTTCCGCAAGAATCAACAACTACAATGGCGCGTCGTCAATAACGCGACGGCTGAGACGGACGCCGCGTGAATGAAGCGCCTAAACAGCTCACGAGACAGTCCCGTACGTCGCATATCCTGGCCACTGGATGCGAGGCGAATGGTATCGATTGGTATGAGGTGTGCCTTCGTAGGCTGTTACCCAGGACGCCCAACTACTCTTTCCAATCCTACATCTGTTTCTAGCGTCGTAGCGGGACCCTCCGTTGTTACTTATTCCGTTCTCGTTATGTCTCATAATCTC",
+    "Taxon_12": "AAGCCCAATAAACCAGACTTACTGGCGGGATAGGGATATAGGCAACGACATGTGCGGCGACCCTTGCGACAGTGGCGCTTTCGCCGCTGCCTAAACCTATTTGAAGGAGCCTAGCAGGCGCAGTAAGGCCCAATACCTCGTCCGTGATACCAGTCCAAACAAGACGTCCTCTTCAATCTTTAGATGACCCACTCGTCATAAAACCTTACTACTATGTGTTCCGGAAGAATCAACAACTACAATGGCGCGTCGTCAATAACGCGACGGCTGAGACGAACGCCGCGTGAATGAAGCGCCTAAATAGCTCACGAGACAGTCCCGTACGTCGCATATCCTGGCCACTGGAGGCGAAGCGAATGGTATCGATTGGTATGAGGTGTGCCTTCGTAGGCTGTTTCCCAGGACGCCCAACTACTCTTTCCAATCCTCCATCTGTTTCTAGCGTCGTAGCGGGACCCTCCATTGTTACTTATTCCGTTCTCGTTATGTCTCATAATCTC",
+    "Taxon_13": "AAGCCCAATAAACAACACTGACTGGCCGGAGAGGGATATAGGCAACGACATGTTCGGCGACCCTTGCGACTGTGACGCTTTCGCCGTTGCCTAAACCTATTTGAAGGAGTCTAGCAGCCGCAGTAAGGCCCAATACCTCGTCCGTGTTACCAGACCAAACAAGACGTCCTCTTCAATGTTTAGATGACCCTCTCGTCGTAAAATCTTTCTACTATGTGTTCCGCAAGAATCAACAACTACAATGGCGCGTCGTGAATAACGCGACGGCTGAGACGAACGGCGCGTGAATGAAGCGCTTAAACAGCTCACGAGCCAGTCCCGTACTTCGCATTTCCTGGCCACTGGAGGTGAAGCGAATGGTATCGATTCGTAGGAGGGGTGCCTTCATCGGCTGTTTCTCAGGACGCCCAACTATTCTTTCCAATCCTACATCTGTTTCTTGCGTCGTTGCGGGACCCTCCATTGTTACTTATTAGGTGCTCGTTATGTCTCATAATCTC",
+    "Taxon_14": "AAGCCCAGTAAACAACACTGACTGGCCGGATAGGGATATAGGCAACGACATGTTCGGCGACCCTTGCGACTGTGACACTTTCGCCGTTGCCTAAACCTATTTGAAGGAGTCTAGCAGCCGCAGAAAGGCCCAATACCTCGTCCGTGTTACCAGACCAAACAAGACGTCCTCTTCAATGTTTAGATGACCCTCTCGTCGTAAAATCTTTCTACTATGTGTTCCGCAAGAATCCACAACTACAATGGCGCGTCGTGAATAACGCGACGGCTGAGACGAACGGCGCGTGAATGAAGCGCTTAAACAGCTCACGAGCCAGTCCCGTAGTTCCCATTTCCTGGCCACTGGAGGTGAAGCGAATGGTATCGATTCATAGGAGGTGTGCCTTCATCGGCTGTTTCTCAGGACGCCCAACTATTCTTTCCCATCCTACATCTGTTTCTTGCGTCGTTGCGGGACCCTCCATTGTTACTTATTAGGTGCTCGTTACGTCTCATAATCTC",
+    "Taxon_15": "AAGCCCAATAAACCACACTGACTGGCCGGATAGGGATATAGGCAACGACATGTTCGGCGACCCTTGCGACAGTGACGCTTTCGTCGTTGCCTAAACCTATTTGAAAGAGTCAAGCAGCCGCAGTAAGGCCCAATACCTCGTCCGTGTTACCAGACCAAACAAGACGTCCTCTTCAATGTTTAGATGACCCTCTCGTCGTAAAATCATTCTCCTATGTGTGCCGCAAGAATCAACAACTACAATGGCGCGTCGTGAATAACGCGACGGCTGGGACGAACGGCGCGTGAATGAAGCGCTTAAACAGCTCACGACCCAGTCGCGTACGTCGCATATCCTGGCCACTGGAGGTGAAGCGAATGGTATCGTTTCGTAGGAGGTGTGCCTTCGTCGGCTGTTTCTCAGGACGCCCAACTATTCTTTCCAATCCTACATCTGTTTCTTGCCTCGTAACGGGACCCTCCATTGTTACTTATTAGGTGCTCGTTATGTCTCATAATCTC",
+    "Taxon_16": "AAGCCCAATAAACCACACTGACTGGCCGGATAGGGTTATAGGCAACGACATGTTCGGCGACCCTTGCGACAGTGACGCTTTCGTCGTTGCCTAAACCTATTTGAAAGAGTCTAGCAGCCGCAGTAAGGCCCAATACCTCGTCCGTGTTACCAGACCAAACAAGACGTCCTCTTCAATGTTTAGATGACCCTCTCGTCGTAAAATCATTCTCCCATGTGTTCCGCAAGAATCAACAACTACAATGGCGCGTCGTGAATAACGCGACGGCTGGGACGAACGGCGCGTGAATGAAGCGCTTAAACAGCTCACGACCCAGTCCCGTACGTGGCATATCCTGGCCACTGGAGGTGAAGCGAATGGTATCGATTCGTAGGAGGTGTGCCTTCGTCGGCTGTTTCTCAGGACGCCCAACTATTCTTTCCAATCCTACATCTGTTTCTTGCCTCGTAGCGGGACCCTCCATTGTTATTTATTAGGTGCTCGTTATGTCTCATAATCTC",
+    "Taxon_2": "AAGCCCAATAAACCACTCTGACTGGCCGAATAGGGATATAGGCAACGACATGTGCGGCGACCCTTGCGACAGTGACGCTTTCGCCGTTGCCTGAACCTATTTGCAGGAGTCTAGCAGCCGCAGTAAGGCACAATACCTCGTCCGTGTTACCATACCAAACAATACGTCCTCTTCAATGTTTAAATGACCCTCTCGTCATAAAACCTGTCTATTATGTGTTCCGCAAGAATCAACAACTACAATGGCGCGTCGTGAATAACGCGACGGCTGAGACGAACGGCGCGTGAATGAAGCGCTTAAACAGCTCAGGAGCCAGTGCCCTACGTCGCATATACTGGCCACTGGAGGTGAAGCGAATTGTATCAATACGTAGGAGGTGTGCCTTCCTAGGCTGTTTCTCAGGACGCCCAACTATTCTTTCCAATCCTACATAAGTTTCTTGCGTCGTAGCGGGACCCTCCATTGTTACTTATTAGGTTCTCGTTATGTCTCATAATCTC",
+    "Taxon_3": "AAGCCCAATAAACCACTCTGACTGGCCGAATAGGGATATAGGCAACGACATGTGCGGCGACCCTTGCGACAGTGACGCTTTCGCCGTTGCCTGAACCTATTTGAATGAGTCTAGCAGCCGCAGTAAGGCACAATACCTCGTCCGTGTTACCAGACCAAACATTACGTCCTCTTCAATGTTTAAATGACCCTCTTGTCATAAAACCTGTGTACTATGTGTTTCGCAAGAATCAACAACTACAATGGCGCGTCGTGAATAACGCGACGGCTGAGACGAACGGCGCGTGAATGAAGCGCTTAATCAGCTCAGGAGCCAGTGCCCTACGTAGCATATCCTGGCCACTGGAGGTGAAGCGAATGGTATCGATACGTAGGAGGTGTGCCTTCGTAGGCTGTGTCTCAGGACGCCCAACTATTCTTTCCTATCCTACACATGTTTCTTGCGTCGTAGCGGGACCCTCCATTGTTACTTATTAGGTTCTCGTTATGTCTCATAATCTC",
+    "Taxon_4": "AAGCCCAATAAACCACTCTGACTGGCCGAATAGGGATATAGGCAACGACATGTGCGGCGACCCTTGCGACAGTGACGCTTTCGCCGTTGCCTGAACCTATTTGAAGGAGTCTAGCAGCCGCAGTAAGGCACAATACCTCGTCCGTGTTACCAGACCAAACAATACGTCCTCTTCAATGTTTAAATGACCCTCTCGTCATAAAACCTGTGTACTATGTGTTTCGCAAGAATCAACAACTACAATGGCGCGTCGTGAATAACGCGACGGCTGAGACGAACGGCGCGTGAATGAAGCGCTTAATCAGCTCAGGAGCCAGTGCCCTACGTCGCATATCCTGGCCACTGGAGGTGAAGCGAATGGTATCGATACGTAGGAGGTGTGCCTTCGTAGGCTGTTTCTCAGGACGCCCAACTATTCTTTCCAATCCTACACATGTTTCTTGCGTCGTAGCGGGACCCTCCATTGTTACTTATTAGGTTCACGTTATGTCTCATAATCTC",
+    "Taxon_5": "AAGCCCAATAAACCACTCTGACTGGCCGAATAGGGATATAGGCAACGACATGTGCGGCGACCCTTGCGACAGTGACGCTTTCGCCGTTGCCTGAACCTATTTGAAGGAGTCTAGCAGCCGCAGTAAGGCACAAGACCTCTTCCGTGTTACCAGACCAAACAATACGTCCTCTTCAATGTTTAAATGACCCTCTCGTCATAAAACCTGTCTACTATGTGTTCCGCAAGAATCAACAACTACAATGGCGCGTCGTGAATAACGCGTCGGCTGAGACGAACGGCGCGTGAATGAAGCGCTTAAACAGCTCAGGAGCCAGTCCCCTACGCCGCATATTCTGGCCACTGGAGGTGGAGCGAATGGTATCGATACGTAGGAGGTGTGCCTTCTTAGGCTGTTACTCAGGACGCCCAACTATTCTTTCCAATCCTACATATGTTTCTTGCGTCGTAGCGGGACCCTCCATTGTTACTTATTAGGTTCTCTTTATATCTCATAATCTC",
+    "Taxon_6": "AAGCCCAATAAACCACTCTGACTGGCCGAATAGGGATATAGGCAACGACATGTGCGGCGACCCTTGCGACAGTGACGCTTTCGCCGTTGCCTGAACCTATTTGAAGGAGTCTAGCAGCCGCAGTAAGGCACAATACCTCTTCCGTGTTACCAGACCAAACAATACGTCCTCTTCAATGTTTAAATGACCCTCTCGTCATAAAACCTGTCTACTATGTGTTCCGCAAGAATCAACAACTACAATGGCGCGTCGTGAATAACGCGACGGCTGAGACGAACGGCGCGTGAATGAAGCGCTTAAACAGCTCAGGAGCCAGTCCCCTACGCCGCATATCCTGGCCACTGGAGGTGAAGCGAATGGTATCGATACGTAGGAGGTGTGCCTTCTTAGGCTGTTACTCAGGACGCCCAAATATTCTTTCCAATCCTACTTATGTTTCTTGCGTCGTAGCGGGACCCTCCATTGTTACTTATTAGGTTCTCGTTATATCTCATAATCTC",
+    "Taxon_7": "AAGCCCAATAAACCACTCTGACTGGCCGAATAGGGATATAGGCAACGACATGTGCCGCGACCCTTGCGACAGTGACGCTTTCGCCGTTGCCTGAACCAATTTGAAGGAGTCTAGCAGCCGCAGTAAGGCACAATACCTCGTCCGTGTTACCAGACCAAACAATACGTCCTCTTCAATGTTTACATGACCCTCTCGTCATAAAACCTGTCTACTATGTGTTCCGCAAGAATCAACAACTACAATGGCGCGTCGTGAATAACGCGACGGCTGAGACGAACGGCGCGTGAATGAAGCGCTTAAACAGCTCAGAAGCCAGTCCCCTACGCCGCATATCCTGGCCACTGGAGGTGAAGCGAATGGTATCGATACGTAGGAGGTGTGCCTTCGTAGGCTGTTACTCAGGACGCCCAACTATTCTTTCCAATCCTACATATGTTTCTTGCGTCGTAGCGGGACCCTCCATTGTTACTTATTAGGTTCTCGTTATGTCTCATAATCTC",
+    "Taxon_8": "AAGCCCAATAAACCACTCTGACTGGCCGAATAGGGATATAGGCAACGACATGTGCGGCGACCCTTGCGACAGTGACGCTTTCGCCGTTGCCTGAACCTATTTGAAGGAGTCTAGCAGCCGCAGTAAGGGACAATACCTCGTCCGTGTTACCAGACCAAACAATACGTCCTCTTCAATGTTTAAATGACCCTCTCGTCATAAAACCTGTCTACTATGTGTTCCGCAAGAATCAACAACTACAATGGCGCGTCGTGAATAACGCGACGGCTGAGACGAACGGCGCGTGAATGAAGCGCTTAAACAGCTCAGGAGCCAGTCCCCTACGCCGCATATCCTGGCCACTGGAGGTGAAGCGAATGGAATCGATACGTAGGAGGTGTGCCTTCGTAGGCTGTTACTCAGGACGCCCAACTATTCTGTCCAATCCTACATAGGTTTCTTGCGTCGTAGCGGGACCCTCCATTGTTACTTATTAGGTTCTCGTTATGTCTCATAATCTC",
+    "Taxon_9": "AAGCCCATTAAACCACAGTGACTGGCCGGATAGGGATATAGGCTACGACATGTGCGGCCAGCCTTGCGACAGTCGCGCTTTCGCCGCTGCCTAAACCTATTTGAACGAGTCTAGCAGCCGCAGTAAGGCCCAATACCTCGTCTGTGATACCAGACCAAACAAGACGTCCTCTTCAATGTTTAGATGACCCTCTCGTCATTAAACCTTACAACTATGTGTTCCGCAAGAATCAACAACTACAATGGCGCGTCGTGAATAACGCGACGGGTGAGACGAACGCCGCGTGAATGAAGCGCCGAAACAGCTCACGAGCCAGTCCCGTACGTCACATATCCTGTCCACTGGAGGCGAAGCGAATGGTATCGATTCGTAGGAGGAGTGCCTTCGTAGGCTGTTTCCTAGGACGCGCAACTATTCTTTCCAATCCTACATCTGTTTCTAGCGTCGTAGCGGGACCCTCCATTGTCACTTATCAGGTTCTCGTTATGTCTCATAGTCTC"
+  },
+  "tree_newick": "((((Taxon_1:0.01226495601,Taxon_2:0.005742892836)internal_node_4:0.006652135395,(Taxon_3:0.009416011358,Taxon_4:0.004448666272)internal_node_7:0.007454650327)internal_node_3:0.005730127986,((Taxon_5:0.006727814624,Taxon_6:0.0109037402)internal_node_11:0.00997688997,(Taxon_7:0.007226550087,Taxon_8:0.005765401189)internal_node_14:0.005383422575)internal_node_10:0.007131543832)internal_node_2:0.007104267772,(((Taxon_9:0.0183523867,Taxon_10:0.01934516042)internal_node_19:0.01988193627,(Taxon_11:0.0263073966,Taxon_12:0.0134400041)internal_node_22:0.02318718736)internal_node_18:0.01703674388,((Taxon_13:0.005238380494,Taxon_14:0.01270926428)internal_node_26:0.01056048645,(Taxon_15:0.01034311132,Taxon_16:0.01311457299)internal_node_29:0.01125715075)internal_node_25:0.01207450965)internal_node_17:0.01206911143)internal_node_1;"
+}

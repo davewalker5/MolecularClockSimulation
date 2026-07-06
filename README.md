@@ -14,7 +14,7 @@ A Python toolkit for simulating sequence evolution, exploring molecular clock mo
 
 Molecular clocks use DNA sequence variation to estimate evolutionary relationships and divergence times between species.
 
-This project explores the computational foundations of molecular clock analysis by building the core algorithms from first principles. Rather than relying on existing phylogenetics libraries, the aim is to understand how evolutionary histories are simulated, represented, reconstructed and ultimately interpreted.
+This project explores the computational foundations of molecular clock analysis by building the core algorithms from first principles. It includes simulation engines for generating synthetic evolutionary datasets, interactive tools for exploring molecular clock models, and implementations of phylogenetic reconstruction algorithms. Rather than relying on existing phylogenetics libraries, the aim is to understand how evolutionary histories are simulated, represented, reconstructed and ultimately interpreted.
 
 The repository combines a reusable simulation library, a command-line interface for generating synthetic datasets, and an interactive explorer for experimenting with molecular clock models.
 
@@ -37,6 +37,23 @@ Features include:
 - Export of simulated datasets in FASTA, Newick and JSON formats
 
 These datasets provide known ground truth against which future phylogenetic reconstruction algorithms can be evaluated.
+
+### Relaxed Molecular Clock Simulation
+
+A second simulation engine implements a simple autocorrelated relaxed molecular clock.
+
+Unlike the strict clock model, individual lineages evolve at different mutation rates while preserving a complete known evolutionary history.
+
+Features include:
+
+- Independent relaxed clock simulation engine
+- Lineage-specific mutation rates
+- Autocorrelated rate inheritance
+- Time and genetic distance tracking
+- Export in FASTA, Newick and JSON formats
+- Complete mutation and lineage-rate history
+
+The relaxed clock engine complements the existing strict clock simulator, providing synthetic datasets for investigating the effects of rate variation on downstream phylogenetic analysis.
 
 ### Strict Molecular Clock Explorer
 
