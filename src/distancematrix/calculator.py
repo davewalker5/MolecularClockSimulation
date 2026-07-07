@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import csv
 import json
+import math
 from pathlib import Path
 from typing import Any
 
-DISTANCE_TYPES = ("hamming", "proportional")
+DNA_BASES = frozenset({"A", "C", "G", "T"})
+DISTANCE_TYPES = ("hamming", "proportional", "jc69")
 
 
 def read_fasta(path: str | Path) -> dict[str, str]:
@@ -65,7 +67,7 @@ def calculate_distance_matrix(
     """Calculate a pairwise distance matrix for aligned sequences.
 
     :param sequences: Mapping of unique sequence labels to aligned sequence strings.
-    :param distance_type: Distance metric to calculate, either hamming or proportional.
+    :param distance_type: Distance metric to calculate: hamming, proportional, or jc69.
     :return: Dictionary containing labels, a square distance matrix, and metric name.
     """
     _validate_sequences(sequences)
@@ -99,15 +101,18 @@ def calculate_distance(first: str, second: str, distance_type: str) -> int | flo
 
     :param first: First aligned sequence.
     :param second: Second aligned sequence.
-    :param distance_type: Distance metric to calculate, either hamming or proportional.
-    :return: Hamming count or proportional distance for the two sequences.
+    :param distance_type: Distance metric to calculate: hamming, proportional, or jc69.
+    :return: Numeric distance for the two sequences under the selected metric.
     """
     _validate_distance_type(distance_type)
 
-    # The public distance type controls which reusable metric helper is applied.
-    if distance_type == "hamming":
-        return hamming_distance(first, second)
-    return proportional_distance(first, second)
+    # Keep metric selection data-driven so future substitution models can be registered here.
+    distance_functions = {
+        "hamming": hamming_distance,
+        "proportional": proportional_distance,
+        "jc69": jc69_distance,
+    }
+    return distance_functions[distance_type](first, second)
 
 
 def hamming_distance(first: str, second: str) -> int:
@@ -136,6 +141,27 @@ def proportional_distance(first: str, second: str) -> float:
 
     # Reuse Hamming distance so both metrics share one definition of a difference.
     return hamming_distance(first, second) / len(first)
+
+
+def jc69_distance(first: str, second: str) -> float:
+    """Calculate the Jukes-Cantor corrected evolutionary distance.
+
+    :param first: First aligned DNA sequence containing only A, C, G, and T.
+    :param second: Second aligned DNA sequence containing only A, C, G, and T.
+    :return: Estimated substitutions per site, or infinity when saturated.
+    """
+    _validate_dna_sequence(first, "first")
+    _validate_dna_sequence(second, "second")
+
+    # JC69 starts from the observed proportional distance between aligned DNA sequences.
+    observed_distance = proportional_distance(first, second)
+    if observed_distance == 0:
+        return 0.0
+    if observed_distance >= 0.75:
+        return float("inf")
+
+    # The correction accounts for unobserved repeated substitutions at the same site.
+    return -0.75 * math.log(1 - (4 * observed_distance / 3))
 
 
 def write_json(matrix: dict[str, Any], path: str | Path) -> None:
@@ -245,6 +271,21 @@ def _validate_distance_type(distance_type: str) -> None:
     :param distance_type: Distance metric name supplied by the caller.
     :return: None.
     """
-    # Restrict metrics to the two options supported by the initial calculator.
+    # Restrict metrics to named implementations so unsupported requests fail clearly.
     if distance_type not in DISTANCE_TYPES:
-        raise ValueError("distance_type must be 'hamming' or 'proportional'")
+        supported = "', '".join(DISTANCE_TYPES)
+        raise ValueError(f"distance_type must be one of: '{supported}'")
+
+
+def _validate_dna_sequence(sequence: str, sequence_name: str) -> None:
+    """Validate that a sequence contains only JC69-compatible DNA bases.
+
+    :param sequence: Sequence string to validate.
+    :param sequence_name: Human-readable name used in validation errors.
+    :return: None.
+    """
+    # Empty sequence validation is handled by proportional_distance after symbol checks.
+    invalid_bases = sorted(set(sequence) - DNA_BASES)
+    if invalid_bases:
+        bases = ", ".join(invalid_bases)
+        raise ValueError(f"{sequence_name} sequence contains invalid DNA bases for jc69: {bases}")
