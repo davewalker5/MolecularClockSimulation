@@ -1,10 +1,12 @@
 import csv
 import json
+import math
 
 import pytest
 
 from distancematrix import (
     calculate_distance_matrix,
+    jc69_distance,
     read_fasta,
     write_csv,
     write_json,
@@ -76,6 +78,87 @@ def test_calculate_distance_matrix_returns_proportional_distances():
         ],
         "distance_metric": "proportional",
     }
+
+
+def test_jc69_distance_returns_zero_for_identical_sequences():
+    """Confirm identical DNA sequences have no corrected evolutionary distance.
+
+    :return: None.
+    """
+    assert jc69_distance("ACGTACGT", "ACGTACGT") == 0.0
+
+
+def test_jc69_distance_matches_known_example():
+    """Confirm JC69 correction matches the expected formula for a known p-distance.
+
+    :return: None.
+    """
+    expected = -0.75 * math.log(1 - (4 * 0.25 / 3))
+
+    assert jc69_distance("ACGTACGT", "ACGGACGA") == pytest.approx(expected)
+
+
+def test_jc69_distance_is_finite_below_saturation_limit():
+    """Confirm JC69 can calculate a finite distance just below saturation.
+
+    :return: None.
+    """
+    expected = -0.75 * math.log(1 - (4 * 0.7 / 3))
+
+    assert jc69_distance("AAAAAAAAAA", "CCCCCCCAAA") == pytest.approx(expected)
+
+
+@pytest.mark.parametrize(
+    "first,second",
+    [
+        ("AAAAAAAA", "CCCCCCAA"),
+        ("AAAAAAAA", "CCCCCCCC"),
+    ],
+)
+def test_jc69_distance_returns_infinity_at_and_above_saturation(first, second):
+    """Confirm saturated JC69 comparisons return infinity instead of raising math errors.
+
+    :param first: First aligned DNA sequence.
+    :param second: Second aligned DNA sequence.
+    :return: None.
+    """
+    assert jc69_distance(first, second) == float("inf")
+
+
+def test_jc69_distance_rejects_invalid_dna_symbols():
+    """Confirm JC69 validates DNA symbols before applying the substitution model.
+
+    :return: None.
+    """
+    with pytest.raises(ValueError, match="invalid DNA bases"):
+        jc69_distance("ACGTNN", "ACGTAA")
+
+
+def test_calculate_distance_matrix_returns_jc69_distances():
+    """Confirm JC69 distances are returned in a symmetric square matrix.
+
+    :return: None.
+    """
+    matrix = calculate_distance_matrix(
+        {
+            "Species_A": "ACGTACGT",
+            "Species_B": "ACGTTCGT",
+            "Species_C": "ACGGACGA",
+        },
+        distance_type="jc69",
+    )
+
+    assert matrix["labels"] == ["Species_A", "Species_B", "Species_C"]
+    assert matrix["distance_metric"] == "jc69"
+    assert matrix["matrix"][0][0] == 0.0
+    assert matrix["matrix"][1][1] == 0.0
+    assert matrix["matrix"][2][2] == 0.0
+    assert matrix["matrix"][0][1] == matrix["matrix"][1][0]
+    assert matrix["matrix"][0][2] == matrix["matrix"][2][0]
+    assert matrix["matrix"][1][2] == matrix["matrix"][2][1]
+    assert matrix["matrix"][0][1] == pytest.approx(-0.75 * math.log(1 - (4 * 0.125 / 3)))
+    assert matrix["matrix"][0][2] == pytest.approx(-0.75 * math.log(1 - (4 * 0.25 / 3)))
+    assert matrix["matrix"][1][2] == pytest.approx(-0.75 * math.log(1 - (4 * 0.375 / 3)))
 
 
 def test_hamming_distance_rejects_unequal_lengths():
@@ -243,6 +326,35 @@ def test_cli_writes_proportional_distance_matrix_files(tmp_path):
             ["Species_B", "0.125", "0.0", "0.375"],
             ["Species_C", "0.25", "0.375", "0.0"],
         ]
+
+
+def test_cli_writes_jc69_distance_matrix_files(tmp_path):
+    """Confirm the CLI can write JC69 matrix outputs without changing file formats.
+
+    :return: None.
+    """
+    fasta = tmp_path / "sequences.fasta"
+    output = tmp_path / "output"
+    fasta.write_text(
+        ">Species_A\nACGTACGT\n>Species_B\nACGTTCGT\n>Species_C\nACGGACGA\n",
+        encoding="utf-8",
+    )
+
+    assert main(["-i", str(fasta), "-o", str(output), "-dt", "jc69"]) == 0
+
+    payload = json.loads((output / "distance_matrix.json").read_text(encoding="utf-8"))
+    assert payload["labels"] == ["Species_A", "Species_B", "Species_C"]
+    assert payload["distance_metric"] == "jc69"
+    assert payload["matrix"][0][0] == 0.0
+    assert payload["matrix"][0][1] == pytest.approx(jc69_distance("ACGTACGT", "ACGTTCGT"))
+    assert payload["matrix"][1][0] == pytest.approx(jc69_distance("ACGTTCGT", "ACGTACGT"))
+    with (output / "distance_matrix.csv").open(encoding="utf-8", newline="") as handle:
+        rows = list(csv.reader(handle))
+
+    assert rows[0] == ["", "Species_A", "Species_B", "Species_C"]
+    assert rows[1][0] == "Species_A"
+    assert float(rows[1][1]) == 0.0
+    assert float(rows[1][2]) == pytest.approx(jc69_distance("ACGTACGT", "ACGTTCGT"))
 
 
 def test_cli_reports_validation_errors(tmp_path):
