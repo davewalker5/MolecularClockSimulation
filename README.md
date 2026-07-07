@@ -14,7 +14,7 @@ A Python toolkit for simulating sequence evolution, exploring molecular clock mo
 
 Molecular clocks use DNA sequence variation to estimate evolutionary relationships and divergence times between species.
 
-This project explores the computational foundations of molecular clock analysis by building the core algorithms from first principles. It includes simulation engines for generating synthetic evolutionary datasets, interactive tools for exploring molecular clock models, and implementations of phylogenetic reconstruction algorithms. Rather than relying on existing phylogenetics libraries, the aim is to understand how evolutionary histories are simulated, represented, reconstructed and ultimately interpreted.
+This project explores the computational foundations of molecular clock analysis by building the core algorithms from first principles. It includes simulation engines for generating synthetic evolutionary datasets, analytical tools for measuring genetic distance, interactive explorers for investigating molecular clock models, and implementations of phylogenetic reconstruction algorithms.
 
 The repository combines reusable simulation engines, command-line interfaces for generating synthetic datasets, and interactive explorers for experimenting with both strict and relaxed molecular clock models.
 
@@ -54,6 +54,19 @@ Features include:
 - Complete mutation and lineage-rate history
 
 The relaxed clock engine complements the existing strict clock simulator, providing synthetic datasets for investigating the effects of rate variation on downstream phylogenetic analysis.
+
+### Distance Matrix Calculator
+
+The project includes a reusable distance matrix calculator for analysing aligned DNA sequences.
+
+The calculator computes pairwise genetic distances between every sequence in a FASTA file and produces symmetric distance matrices suitable for downstream phylogenetic reconstruction. Two distance calculations are currently supported:
+
+- Hamming distance
+- Proportional distance (p-distance)
+
+Matrices are exported in both CSV and JSON formats, allowing them to be inspected directly or consumed programmatically by subsequent algorithms.
+
+The calculator is implemented as a reusable Python module with a lightweight command-line interface and forms the foundation for future phylogenetic reconstruction methods, beginning with UPGMA.
 
 ### Molecular Clock Explorers
 
