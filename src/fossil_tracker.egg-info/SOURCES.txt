@@ -1,8 +1,0 @@
-LICENSE
-pyproject.toml
-src/__init__.py
-src/fossil_tracker.egg-info/PKG-INFO
-src/fossil_tracker.egg-info/SOURCES.txt
-src/fossil_tracker.egg-info/dependency_links.txt
-src/fossil_tracker.egg-info/requires.txt
-src/fossil_tracker.egg-info/top_level.txt
