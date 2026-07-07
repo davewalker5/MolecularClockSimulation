@@ -1,2 +1,0 @@
-molecular_clock_simulation
-strictclock
