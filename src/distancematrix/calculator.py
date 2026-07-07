@@ -7,6 +7,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+DISTANCE_TYPES = ("hamming", "proportional")
+
 
 def read_fasta(path: str | Path) -> dict[str, str]:
     """Read aligned molecular sequences from a FASTA file.
@@ -56,31 +58,56 @@ def read_fasta(path: str | Path) -> dict[str, str]:
     return sequences
 
 
-def calculate_distance_matrix(sequences: dict[str, str]) -> dict[str, Any]:
-    """Calculate a pairwise Hamming distance matrix for aligned sequences.
+def calculate_distance_matrix(
+    sequences: dict[str, str],
+    distance_type: str = "hamming",
+) -> dict[str, Any]:
+    """Calculate a pairwise distance matrix for aligned sequences.
 
     :param sequences: Mapping of unique sequence labels to aligned sequence strings.
+    :param distance_type: Distance metric to calculate, either hamming or proportional.
     :return: Dictionary containing labels, a square distance matrix, and metric name.
     """
     _validate_sequences(sequences)
+    _validate_distance_type(distance_type)
 
     # Preserve caller insertion order so labels and rows remain predictable.
     labels = list(sequences)
-    matrix: list[list[int]] = []
+    matrix: list[list[int | float]] = []
 
     for row_label in labels:
-        row: list[int] = []
+        row: list[int | float] = []
         for column_label in labels:
-            # Hamming distance is the count of positions with different characters.
-            distance = hamming_distance(sequences[row_label], sequences[column_label])
+            # Dispatch through a helper so the matrix loop stays independent of the metric.
+            distance = calculate_distance(
+                sequences[row_label],
+                sequences[column_label],
+                distance_type,
+            )
             row.append(distance)
         matrix.append(row)
 
     return {
         "labels": labels,
         "matrix": matrix,
-        "distance_metric": "hamming",
+        "distance_metric": distance_type,
     }
+
+
+def calculate_distance(first: str, second: str, distance_type: str) -> int | float:
+    """Calculate the selected distance metric between two aligned sequences.
+
+    :param first: First aligned sequence.
+    :param second: Second aligned sequence.
+    :param distance_type: Distance metric to calculate, either hamming or proportional.
+    :return: Hamming count or proportional distance for the two sequences.
+    """
+    _validate_distance_type(distance_type)
+
+    # The public distance type controls which reusable metric helper is applied.
+    if distance_type == "hamming":
+        return hamming_distance(first, second)
+    return proportional_distance(first, second)
 
 
 def hamming_distance(first: str, second: str) -> int:
@@ -95,6 +122,20 @@ def hamming_distance(first: str, second: str) -> int:
 
     # zip is safe after the length check and keeps the comparison position-by-position.
     return sum(left != right for left, right in zip(first, second, strict=True))
+
+
+def proportional_distance(first: str, second: str) -> float:
+    """Calculate the proportion of differing positions between two aligned sequences.
+
+    :param first: First aligned sequence.
+    :param second: Second aligned sequence.
+    :return: Differing positions divided by aligned sequence length.
+    """
+    if not first:
+        raise ValueError("Sequences must not be empty to calculate proportional distance")
+
+    # Reuse Hamming distance so both metrics share one definition of a difference.
+    return hamming_distance(first, second) / len(first)
 
 
 def write_json(matrix: dict[str, Any], path: str | Path) -> None:
@@ -196,3 +237,14 @@ def _validate_sequences(sequences: dict[str, str]) -> None:
     lengths = {len(sequence) for sequence in sequences.values()}
     if len(lengths) != 1:
         raise ValueError("All FASTA sequences must be the same length")
+
+
+def _validate_distance_type(distance_type: str) -> None:
+    """Validate the requested distance metric.
+
+    :param distance_type: Distance metric name supplied by the caller.
+    :return: None.
+    """
+    # Restrict metrics to the two options supported by the initial calculator.
+    if distance_type not in DISTANCE_TYPES:
+        raise ValueError("distance_type must be 'hamming' or 'proportional'")

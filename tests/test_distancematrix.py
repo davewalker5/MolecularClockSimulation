@@ -10,6 +10,7 @@ from distancematrix import (
     write_json,
 )
 from distancematrix.calculator import hamming_distance, write_outputs
+from distancematrix.calculator import proportional_distance
 from distancematrix.cli import main
 
 
@@ -52,6 +53,31 @@ def test_calculate_distance_matrix_returns_hamming_counts():
     }
 
 
+def test_calculate_distance_matrix_returns_proportional_distances():
+    """Confirm proportional distances divide Hamming counts by sequence length.
+
+    :return: None.
+    """
+    matrix = calculate_distance_matrix(
+        {
+            "Species_A": "ACGTACGT",
+            "Species_B": "ACGTTCGT",
+            "Species_C": "ACGGACGA",
+        },
+        distance_type="proportional",
+    )
+
+    assert matrix == {
+        "labels": ["Species_A", "Species_B", "Species_C"],
+        "matrix": [
+            [0.0, 0.125, 0.25],
+            [0.125, 0.0, 0.375],
+            [0.25, 0.375, 0.0],
+        ],
+        "distance_metric": "proportional",
+    }
+
+
 def test_hamming_distance_rejects_unequal_lengths():
     """Confirm direct distance calculation requires aligned sequences.
 
@@ -59,6 +85,24 @@ def test_hamming_distance_rejects_unequal_lengths():
     """
     with pytest.raises(ValueError, match="same length"):
         hamming_distance("ACGT", "ACG")
+
+
+def test_proportional_distance_rejects_unequal_lengths():
+    """Confirm proportional distance also requires aligned sequences.
+
+    :return: None.
+    """
+    with pytest.raises(ValueError, match="same length"):
+        proportional_distance("ACGT", "ACG")
+
+
+def test_calculate_distance_matrix_rejects_unknown_distance_type():
+    """Confirm callers must request one of the supported distance metrics.
+
+    :return: None.
+    """
+    with pytest.raises(ValueError, match="distance_type"):
+        calculate_distance_matrix({"Species_A": "ACGT", "Species_B": "ACGA"}, "jukes-cantor")
 
 
 def test_read_fasta_rejects_missing_file(tmp_path):
@@ -169,6 +213,36 @@ def test_cli_writes_distance_matrix_files(tmp_path, capsys):
         [2, 3, 0],
     ]
     assert (output / "distance_matrix.csv").exists()
+
+
+def test_cli_writes_proportional_distance_matrix_files(tmp_path):
+    """Confirm the CLI can write proportional matrix outputs.
+
+    :return: None.
+    """
+    fasta = tmp_path / "sequences.fasta"
+    output = tmp_path / "output"
+    fasta.write_text(
+        ">Species_A\nACGTACGT\n>Species_B\nACGTTCGT\n>Species_C\nACGGACGA\n",
+        encoding="utf-8",
+    )
+
+    assert main(["-i", str(fasta), "-o", str(output), "-dt", "proportional"]) == 0
+
+    payload = json.loads((output / "distance_matrix.json").read_text(encoding="utf-8"))
+    assert payload["distance_metric"] == "proportional"
+    assert payload["matrix"] == [
+        [0.0, 0.125, 0.25],
+        [0.125, 0.0, 0.375],
+        [0.25, 0.375, 0.0],
+    ]
+    with (output / "distance_matrix.csv").open(encoding="utf-8", newline="") as handle:
+        assert list(csv.reader(handle)) == [
+            ["", "Species_A", "Species_B", "Species_C"],
+            ["Species_A", "0.0", "0.125", "0.25"],
+            ["Species_B", "0.125", "0.0", "0.375"],
+            ["Species_C", "0.25", "0.375", "0.0"],
+        ]
 
 
 def test_cli_reports_validation_errors(tmp_path):

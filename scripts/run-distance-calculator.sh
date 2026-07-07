@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-if (( $# != 2 )); then
+if (( $# < 2 )); then
     scriptname=$(basename -- "$0")
-    echo Usage: $scriptname /path/to/FASTA/file /path/to/output/folder
+    echo Usage: $scriptname /path/to/FASTA/file /path/to/output/folder [Hamming|Proportional]
     exit 1
 fi
 
@@ -11,4 +11,7 @@ cd "$PROJECT_ROOT"
 
 export PYTHONPATH="$PROJECT_ROOT/src"
 
-python -m distancematrix --input "$1" --output "$2"
+type="${3:-hamming}"
+type=$(printf '%s' "$type" | tr '[:upper:]' '[:lower:]')
+
+python -m distancematrix --input "$1" --output "$2" --distance-type "$type"
