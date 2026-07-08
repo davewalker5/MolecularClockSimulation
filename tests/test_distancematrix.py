@@ -5,7 +5,9 @@ import math
 import pytest
 
 from distancematrix import (
+    calculate_nucleotide_frequencies,
     calculate_distance_matrix,
+    f81_distance,
     jc69_distance,
     kimura_distance,
     read_fasta,
@@ -226,6 +228,74 @@ def test_kimura_distance_returns_infinity_when_logarithm_terms_are_undefined(fir
     assert kimura_distance(first, second) == float("inf")
 
 
+def test_calculate_nucleotide_frequencies_pools_pairwise_sequences():
+    """Confirm F81 empirical frequencies are estimated from both sequences.
+
+    :return: None.
+    """
+    assert calculate_nucleotide_frequencies("AAAA", "ACGT") == {
+        "A": 0.625,
+        "C": 0.125,
+        "G": 0.125,
+        "T": 0.125,
+    }
+
+
+def test_f81_distance_returns_zero_for_identical_sequences():
+    """Confirm identical DNA sequences have no F81 corrected evolutionary distance.
+
+    :return: None.
+    """
+    assert f81_distance("AAAA", "AAAA") == 0.0
+
+
+def test_f81_distance_matches_unequal_frequency_example():
+    """Confirm F81 correction uses empirical nucleotide frequencies.
+
+    :return: None.
+    """
+    frequencies = calculate_nucleotide_frequencies("AAAACCCC", "AAAAGGCC")
+    frequency_factor = 1 - sum(frequency ** 2 for frequency in frequencies.values())
+    observed_distance = 0.25
+    expected = -frequency_factor * math.log(1 - (observed_distance / frequency_factor))
+
+    assert f81_distance("AAAACCCC", "AAAAGGCC") == pytest.approx(expected)
+
+
+def test_f81_distance_matches_jc69_when_frequencies_are_equal():
+    """Confirm F81 collapses to JC69 when empirical base frequencies are equal.
+
+    :return: None.
+    """
+    first = "ACGTACGT"
+    second = "TCGTACGA"
+
+    assert calculate_nucleotide_frequencies(first, second) == {
+        "A": 0.25,
+        "C": 0.25,
+        "G": 0.25,
+        "T": 0.25,
+    }
+    assert f81_distance(first, second) == pytest.approx(jc69_distance(first, second))
+
+
+def test_f81_distance_rejects_invalid_dna_symbols():
+    """Confirm F81 validates DNA symbols before applying the substitution model.
+
+    :return: None.
+    """
+    with pytest.raises(ValueError, match="invalid DNA bases"):
+        f81_distance("ACGTNN", "ACGTAA")
+
+
+def test_f81_distance_returns_infinity_when_logarithm_term_is_undefined():
+    """Confirm saturated F81 comparisons return infinity instead of raising math errors.
+
+    :return: None.
+    """
+    assert f81_distance("AAAA", "CCCC") == float("inf")
+
+
 def test_calculate_distance_matrix_returns_jc69_distances():
     """Confirm JC69 distances are returned in a symmetric square matrix.
 
@@ -282,6 +352,37 @@ def test_calculate_distance_matrix_returns_k80_distances():
     assert matrix["matrix"][2][0] == pytest.approx(expected_transversion)
     assert matrix["matrix"][1][2] == pytest.approx(expected_mixed)
     assert matrix["matrix"][2][1] == pytest.approx(expected_mixed)
+
+
+def test_calculate_distance_matrix_returns_f81_distances():
+    """Confirm F81 distances are returned in a symmetric square matrix.
+
+    :return: None.
+    """
+    matrix = calculate_distance_matrix(
+        {
+            "Species_A": "AAAACCCC",
+            "Species_B": "AAAAGGCC",
+            "Species_C": "AAAATTCC",
+        },
+        distance_type="f81",
+    )
+
+    expected_ab = f81_distance("AAAACCCC", "AAAAGGCC")
+    expected_ac = f81_distance("AAAACCCC", "AAAATTCC")
+    expected_bc = f81_distance("AAAAGGCC", "AAAATTCC")
+
+    assert matrix["labels"] == ["Species_A", "Species_B", "Species_C"]
+    assert matrix["distance_metric"] == "f81"
+    assert matrix["matrix"][0][0] == 0.0
+    assert matrix["matrix"][1][1] == 0.0
+    assert matrix["matrix"][2][2] == 0.0
+    assert matrix["matrix"][0][1] == pytest.approx(expected_ab)
+    assert matrix["matrix"][1][0] == pytest.approx(expected_ab)
+    assert matrix["matrix"][0][2] == pytest.approx(expected_ac)
+    assert matrix["matrix"][2][0] == pytest.approx(expected_ac)
+    assert matrix["matrix"][1][2] == pytest.approx(expected_bc)
+    assert matrix["matrix"][2][1] == pytest.approx(expected_bc)
 
 
 def test_hamming_distance_rejects_unequal_lengths():
@@ -507,6 +608,35 @@ def test_cli_writes_k80_distance_matrix_files(tmp_path):
     assert rows[1][0] == "Species_A"
     assert float(rows[1][1]) == 0.0
     assert float(rows[1][2]) == pytest.approx(kimura_distance("AAAA", "GAAA"))
+
+
+def test_cli_writes_f81_distance_matrix_files(tmp_path):
+    """Confirm the CLI can write F81 matrix outputs without changing file formats.
+
+    :return: None.
+    """
+    fasta = tmp_path / "sequences.fasta"
+    output = tmp_path / "output"
+    fasta.write_text(
+        ">Species_A\nAAAACCCC\n>Species_B\nAAAAGGCC\n>Species_C\nAAAATTCC\n",
+        encoding="utf-8",
+    )
+
+    assert main(["-i", str(fasta), "-o", str(output), "-dt", "f81"]) == 0
+
+    payload = json.loads((output / "distance_matrix.json").read_text(encoding="utf-8"))
+    assert payload["labels"] == ["Species_A", "Species_B", "Species_C"]
+    assert payload["distance_metric"] == "f81"
+    assert payload["matrix"][0][0] == 0.0
+    assert payload["matrix"][0][1] == pytest.approx(f81_distance("AAAACCCC", "AAAAGGCC"))
+    assert payload["matrix"][1][0] == pytest.approx(f81_distance("AAAAGGCC", "AAAACCCC"))
+    with (output / "distance_matrix.csv").open(encoding="utf-8", newline="") as handle:
+        rows = list(csv.reader(handle))
+
+    assert rows[0] == ["", "Species_A", "Species_B", "Species_C"]
+    assert rows[1][0] == "Species_A"
+    assert float(rows[1][1]) == 0.0
+    assert float(rows[1][2]) == pytest.approx(f81_distance("AAAACCCC", "AAAAGGCC"))
 
 
 def test_cli_reports_validation_errors(tmp_path):

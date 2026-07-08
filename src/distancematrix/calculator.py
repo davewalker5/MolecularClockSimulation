@@ -13,7 +13,7 @@ TRANSITION_PAIRS = frozenset({
     frozenset({"A", "G"}),
     frozenset({"C", "T"}),
 })
-DISTANCE_TYPES = ("hamming", "proportional", "jc69", "k80")
+DISTANCE_TYPES = ("hamming", "proportional", "jc69", "k80", "f81")
 
 
 def read_fasta(path: str | Path) -> dict[str, str]:
@@ -71,7 +71,7 @@ def calculate_distance_matrix(
     """Calculate a pairwise distance matrix for aligned sequences.
 
     :param sequences: Mapping of unique sequence labels to aligned sequence strings.
-    :param distance_type: Distance metric to calculate: hamming, proportional, jc69, or k80.
+    :param distance_type: Distance metric to calculate: hamming, proportional, jc69, k80, or f81.
     :return: Dictionary containing labels, a square distance matrix, and metric name.
     """
     _validate_sequences(sequences)
@@ -105,7 +105,7 @@ def calculate_distance(first: str, second: str, distance_type: str) -> int | flo
 
     :param first: First aligned sequence.
     :param second: Second aligned sequence.
-    :param distance_type: Distance metric to calculate: hamming, proportional, jc69, or k80.
+    :param distance_type: Distance metric to calculate: hamming, proportional, jc69, k80, or f81.
     :return: Numeric distance for the two sequences under the selected metric.
     """
     _validate_distance_type(distance_type)
@@ -116,6 +116,7 @@ def calculate_distance(first: str, second: str, distance_type: str) -> int | flo
         "proportional": proportional_distance,
         "jc69": jc69_distance,
         "k80": kimura_distance,
+        "f81": f81_distance,
     }
     return distance_functions[distance_type](first, second)
 
@@ -198,6 +199,58 @@ def kimura_distance(first: str, second: str) -> float:
         -0.5 * math.log(transition_term)
         - 0.25 * math.log(transversion_term)
     )
+
+
+def f81_distance(first: str, second: str) -> float:
+    """Calculate the Felsenstein 1981 corrected evolutionary distance.
+
+    :param first: First aligned DNA sequence containing only A, C, G, and T.
+    :param second: Second aligned DNA sequence containing only A, C, G, and T.
+    :return: Estimated substitutions per site, or infinity when saturated.
+    """
+    _validate_dna_sequence(first, "first", "f81")
+    _validate_dna_sequence(second, "second", "f81")
+
+    # F81 corrects the observed difference proportion while allowing unequal base frequencies.
+    observed_distance = proportional_distance(first, second)
+    if observed_distance == 0:
+        return 0.0
+
+    # Empirical equilibrium frequencies are estimated from the pooled pairwise comparison.
+    frequencies = calculate_nucleotide_frequencies(first, second)
+    frequency_factor = 1 - sum(frequency ** 2 for frequency in frequencies.values())
+
+    # The logarithm is only defined while observed divergence is below the model limit.
+    if frequency_factor <= 0 or observed_distance >= frequency_factor:
+        return float("inf")
+
+    # Equal frequencies produce frequency_factor=0.75, matching the JC69 correction.
+    return -frequency_factor * math.log(1 - (observed_distance / frequency_factor))
+
+
+def calculate_nucleotide_frequencies(first: str, second: str) -> dict[str, float]:
+    """Estimate empirical nucleotide frequencies from two aligned DNA sequences.
+
+    :param first: First aligned DNA sequence containing only A, C, G, and T.
+    :param second: Second aligned DNA sequence containing only A, C, G, and T.
+    :return: Mapping from nucleotide base to pooled empirical frequency.
+    """
+    _validate_dna_sequence(first, "first", "f81")
+    _validate_dna_sequence(second, "second", "f81")
+    if not first:
+        raise ValueError("Sequences must not be empty to calculate F81 distance")
+    if len(first) != len(second):
+        raise ValueError("Sequences must have the same length to calculate F81 distance")
+
+    # Count bases across both sequences so each pairwise comparison estimates its own frequencies.
+    pooled_sequence = first + second
+    total_bases = len(pooled_sequence)
+
+    # Return all four bases explicitly so downstream calculations have stable keys.
+    return {
+        base: pooled_sequence.count(base) / total_bases
+        for base in sorted(DNA_BASES)
+    }
 
 
 def count_k80_substitutions(first: str, second: str) -> tuple[int, int]:
