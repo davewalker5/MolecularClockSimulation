@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from pathlib import PurePath
 from typing import Any
 
+from molecular_clock_simulation.distance_analysis import render_distance_analysis_tab
 from relaxedclock.simulator import (
     RelaxedClockConfig,
     RelaxedClockResult,
@@ -59,7 +60,7 @@ class ExplorerDefaults:
     """
 
     sequence_length: int = 500
-    max_depth: int = 4
+    max_depth: int = 3
     random_seed: int = 42
     branch_duration: float = 1.0
     duration_jitter: float = 0.0
@@ -761,13 +762,18 @@ def render_app() -> None:
         f"Newick branch lengths: {html.escape(summary['newick_branch_lengths'])}"
     )
 
-    sequence_tab, newick_tab, download_tab = st.tabs(
-        ["FASTA Sequences", "Newick Output", "Downloads"]
+    sequence_tab, newick_tab, distance_tab, download_tab = st.tabs(
+        ["FASTA Sequences", "Newick Output", "Distance Analysis", "Downloads"]
     )
     with sequence_tab:
         st.code(fasta, language="text")
     with newick_tab:
         st.code(result.newick, language="text")
+    with distance_tab:
+        render_distance_analysis_tab(
+            result.terminal_sequences,
+            state_key_prefix="relaxed",
+        )
     with download_tab:
         # A single selector and button avoids four competing download controls.
         download_selection = st.selectbox(

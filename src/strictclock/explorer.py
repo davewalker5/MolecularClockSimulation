@@ -11,6 +11,7 @@ from dataclasses import dataclass
 from pathlib import PurePath
 from typing import Any
 
+from molecular_clock_simulation.distance_analysis import render_distance_analysis_tab
 from strictclock.simulator import (
     SimulationConfig,
     SimulationResult,
@@ -54,9 +55,9 @@ class ExplorerDefaults:
     """
 
     sequence_length: int = 1000
-    number_of_taxa: int = 16
+    number_of_taxa: int = 8
     random_seed: int = 734635
-    tree_topology: str = "balanced"
+    tree_topology: str = "random"
     root_age: float = 1.0
     mutation_rate: float = 0.01
 
@@ -491,13 +492,18 @@ def render_app() -> None:
         f"mutation rate: {summary['mutation_rate']}"
     )
 
-    sequence_tab, newick_tab, download_tab = st.tabs(
-        ["FASTA Sequences", "Newick Output", "Downloads"]
+    sequence_tab, newick_tab, distance_tab, download_tab = st.tabs(
+        ["FASTA Sequences", "Newick Output", "Distance Analysis", "Downloads"]
     )
     with sequence_tab:
         st.code(fasta, language="text")
     with newick_tab:
         st.code(result.newick, language="text")
+    with distance_tab:
+        render_distance_analysis_tab(
+            result.terminal_sequences,
+            state_key_prefix="strict",
+        )
     with download_tab:
         # A single selector and button avoids four competing download controls.
         download_selection = st.selectbox(
