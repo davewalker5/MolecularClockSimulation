@@ -13,7 +13,7 @@ TRANSITION_PAIRS = frozenset({
     frozenset({"A", "G"}),
     frozenset({"C", "T"}),
 })
-DISTANCE_TYPES = ("hamming", "proportional", "jc69", "k80", "f81")
+DISTANCE_TYPES = ("hamming", "proportional", "jc69", "k80", "f81", "hky85")
 
 
 def read_fasta(path: str | Path) -> dict[str, str]:
@@ -71,7 +71,7 @@ def calculate_distance_matrix(
     """Calculate a pairwise distance matrix for aligned sequences.
 
     :param sequences: Mapping of unique sequence labels to aligned sequence strings.
-    :param distance_type: Distance metric to calculate: hamming, proportional, jc69, k80, or f81.
+    :param distance_type: Distance metric to calculate: hamming, proportional, jc69, k80, f81, or hky85.
     :return: Dictionary containing labels, a square distance matrix, and metric name.
     """
     _validate_sequences(sequences)
@@ -105,7 +105,7 @@ def calculate_distance(first: str, second: str, distance_type: str) -> int | flo
 
     :param first: First aligned sequence.
     :param second: Second aligned sequence.
-    :param distance_type: Distance metric to calculate: hamming, proportional, jc69, k80, or f81.
+    :param distance_type: Distance metric to calculate: hamming, proportional, jc69, k80, f81, or hky85.
     :return: Numeric distance for the two sequences under the selected metric.
     """
     _validate_distance_type(distance_type)
@@ -117,6 +117,7 @@ def calculate_distance(first: str, second: str, distance_type: str) -> int | flo
         "jc69": jc69_distance,
         "k80": kimura_distance,
         "f81": f81_distance,
+        "hky85": hky85_distance,
     }
     return distance_functions[distance_type](first, second)
 
@@ -228,6 +229,45 @@ def f81_distance(first: str, second: str) -> float:
     return -frequency_factor * math.log(1 - (observed_distance / frequency_factor))
 
 
+def hky85_distance(first: str, second: str) -> float:
+    """Calculate the Hasegawa-Kishino-Yano 1985 corrected evolutionary distance.
+
+    :param first: First aligned DNA sequence containing only A, C, G, and T.
+    :param second: Second aligned DNA sequence containing only A, C, G, and T.
+    :return: Estimated substitutions per site, or infinity when saturated.
+    """
+    transitions, transversions = count_hky85_substitutions(first, second)
+    sequence_length = len(first)
+
+    # Identical sequences have no observed substitutions and therefore zero distance.
+    if transitions == 0 and transversions == 0:
+        return 0.0
+
+    # HKY85 combines transition/transversion separation with empirical base frequencies.
+    frequencies = calculate_nucleotide_frequencies(first, second)
+    purine_frequency = frequencies["A"] + frequencies["G"]
+    pyrimidine_frequency = frequencies["C"] + frequencies["T"]
+    frequency_factor = 2 * purine_frequency * pyrimidine_frequency
+    if frequency_factor <= 0:
+        return float("inf")
+
+    # Observed substitutions are normalised by alignment length before correction.
+    transition_proportion = transitions / sequence_length
+    transversion_proportion = transversions / sequence_length
+
+    # The logarithm arguments must stay positive for the model to produce a finite estimate.
+    transition_term = 1 - (transition_proportion / frequency_factor) - transversion_proportion
+    transversion_term = 1 - (2 * transversion_proportion)
+    if transition_term <= 0 or transversion_term <= 0:
+        return float("inf")
+
+    # Equal purine/pyrimidine frequencies reduce this correction to the K80 equation.
+    return (
+        -frequency_factor * math.log(transition_term)
+        - 0.5 * (1 - frequency_factor) * math.log(transversion_term)
+    )
+
+
 def calculate_nucleotide_frequencies(first: str, second: str) -> dict[str, float]:
     """Estimate empirical nucleotide frequencies from two aligned DNA sequences.
 
@@ -235,12 +275,12 @@ def calculate_nucleotide_frequencies(first: str, second: str) -> dict[str, float
     :param second: Second aligned DNA sequence containing only A, C, G, and T.
     :return: Mapping from nucleotide base to pooled empirical frequency.
     """
-    _validate_dna_sequence(first, "first", "f81")
-    _validate_dna_sequence(second, "second", "f81")
+    _validate_dna_sequence(first, "first", "f81/hky85")
+    _validate_dna_sequence(second, "second", "f81/hky85")
     if not first:
-        raise ValueError("Sequences must not be empty to calculate F81 distance")
+        raise ValueError("Sequences must not be empty to calculate F81/HKY85 distance")
     if len(first) != len(second):
-        raise ValueError("Sequences must have the same length to calculate F81 distance")
+        raise ValueError("Sequences must have the same length to calculate F81/HKY85 distance")
 
     # Count bases across both sequences so each pairwise comparison estimates its own frequencies.
     pooled_sequence = first + second
@@ -260,12 +300,37 @@ def count_k80_substitutions(first: str, second: str) -> tuple[int, int]:
     :param second: Second aligned DNA sequence containing only A, C, G, and T.
     :return: Tuple containing transition count followed by transversion count.
     """
-    _validate_dna_sequence(first, "first", "k80")
-    _validate_dna_sequence(second, "second", "k80")
+    return _count_transition_transversion_substitutions(first, second, "k80")
+
+
+def count_hky85_substitutions(first: str, second: str) -> tuple[int, int]:
+    """Count transition and transversion substitutions for an HKY85 comparison.
+
+    :param first: First aligned DNA sequence containing only A, C, G, and T.
+    :param second: Second aligned DNA sequence containing only A, C, G, and T.
+    :return: Tuple containing transition count followed by transversion count.
+    """
+    return _count_transition_transversion_substitutions(first, second, "hky85")
+
+
+def _count_transition_transversion_substitutions(
+    first: str,
+    second: str,
+    model_name: str,
+) -> tuple[int, int]:
+    """Count transition and transversion substitutions between aligned DNA sequences.
+
+    :param first: First aligned DNA sequence containing only A, C, G, and T.
+    :param second: Second aligned DNA sequence containing only A, C, G, and T.
+    :param model_name: Distance model name used in validation errors.
+    :return: Tuple containing transition count followed by transversion count.
+    """
+    _validate_dna_sequence(first, "first", model_name)
+    _validate_dna_sequence(second, "second", model_name)
     if not first:
-        raise ValueError("Sequences must not be empty to calculate K80 distance")
+        raise ValueError(f"Sequences must not be empty to calculate {model_name.upper()} distance")
     if len(first) != len(second):
-        raise ValueError("Sequences must have the same length to calculate K80 distance")
+        raise ValueError(f"Sequences must have the same length to calculate {model_name.upper()} distance")
 
     transitions = 0
     transversions = 0
