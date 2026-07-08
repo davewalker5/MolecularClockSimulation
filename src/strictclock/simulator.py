@@ -374,7 +374,7 @@ def evolve_children(
 
     :param node: Parent node whose descendants should be evolved.
     :param mutation_rate: Strict-clock substitution rate per site per unit time.
-    :param biology: Transition/transversion weighting used for substitutions.
+    :param biology: Biology settings used for nucleotide substitutions.
     :param rng: Random number generator used for substitutions.
     :return: None.
     """
@@ -402,7 +402,7 @@ def mutate_sequence(
     :param sequence: Parent sequence at the start of the branch.
     :param branch_length: Evolutionary time represented by the branch.
     :param mutation_rate: Strict-clock substitution rate per site per unit time.
-    :param biology: Transition/transversion weighting used for substitutions.
+    :param biology: Biology settings used for nucleotide substitutions.
     :param rng: Random number generator used for mutation decisions.
     :return: Mutated sequence and list of mutation events on the branch.
     """
@@ -413,12 +413,13 @@ def mutate_sequence(
 
     for index, base in enumerate(sequence_chars):
         if rng.random() < probability:
-            # The shared helper keeps transition/transversion weighting consistent.
+            # The shared helper keeps transition/transversion and frequency weighting consistent.
             derived = mutate_base(
                 base,
                 biology.transition_weight,
                 biology.transversion_weight,
                 rng,
+                equilibrium_frequencies=biology.equilibrium_frequencies,
             )
             sequence_chars[index] = derived
             events.append(

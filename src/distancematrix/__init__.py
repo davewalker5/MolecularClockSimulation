@@ -1,7 +1,9 @@
 """Distance matrix calculation for aligned molecular sequence data."""
 
 from distancematrix.calculator import (
+    calculate_nucleotide_frequencies,
     calculate_distance_matrix,
+    f81_distance,
     jc69_distance,
     kimura_distance,
     read_fasta,
@@ -10,7 +12,9 @@ from distancematrix.calculator import (
 )
 
 __all__ = [
+    "calculate_nucleotide_frequencies",
     "calculate_distance_matrix",
+    "f81_distance",
     "jc69_distance",
     "kimura_distance",
     "read_fasta",

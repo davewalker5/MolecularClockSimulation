@@ -8,6 +8,7 @@ import biology
 import relaxedclock.simulator as relaxed_simulator
 import strictclock.simulator as strict_simulator
 from biology import BiologySettings, load_biology_settings, mutate_base
+from biology.mutation import validate_equilibrium_frequencies
 
 
 def test_transition_weight_increases_transition_frequency():
@@ -44,6 +45,30 @@ def test_equal_weights_preserve_uniform_substitution_behavior():
     assert draws["T"] / total == pytest.approx(1 / 3, abs=0.03)
 
 
+def test_equilibrium_frequencies_weight_replacement_bases():
+    """Confirm configured equilibrium frequencies bias replacement nucleotide choice.
+
+    :return: None.
+    """
+    rng = random.Random(321)
+    draws = Counter(
+        mutate_base(
+            "A",
+            transition_weight=1.0,
+            transversion_weight=1.0,
+            rng=rng,
+            equilibrium_frequencies={"A": 0.10, "C": 0.60, "G": 0.20, "T": 0.10},
+        )
+        for _ in range(16000)
+    )
+    total = sum(draws.values())
+
+    assert draws["C"] / total == pytest.approx(0.60 / 0.90, abs=0.03)
+    assert draws["G"] / total == pytest.approx(0.20 / 0.90, abs=0.03)
+    assert draws["T"] / total == pytest.approx(0.10 / 0.90, abs=0.03)
+    assert "A" not in draws
+
+
 def test_transition_weight_sensitivity_changes_observed_transition_fraction():
     """Confirm larger transition weights increase observed transition substitutions.
 
@@ -67,6 +92,29 @@ def test_transition_weight_sensitivity_changes_observed_transition_fraction():
     assert biased_transition_fraction == pytest.approx(5 / 7, abs=0.03)
 
 
+def test_transition_bias_combines_with_equilibrium_frequencies():
+    """Confirm transition/transversion and equilibrium weights are both applied.
+
+    :return: None.
+    """
+    rng = random.Random(654)
+    draws = Counter(
+        mutate_base(
+            "A",
+            transition_weight=4.0,
+            transversion_weight=1.0,
+            rng=rng,
+            equilibrium_frequencies={"A": 0.20, "C": 0.30, "G": 0.10, "T": 0.40},
+        )
+        for _ in range(16000)
+    )
+    total = sum(draws.values())
+
+    assert draws["C"] / total == pytest.approx(0.30 / 1.10, abs=0.03)
+    assert draws["G"] / total == pytest.approx(0.40 / 1.10, abs=0.03)
+    assert draws["T"] / total == pytest.approx(0.40 / 1.10, abs=0.03)
+
+
 def test_biology_settings_reject_non_positive_weights():
     """Confirm substitution weights must be positive.
 
@@ -76,6 +124,19 @@ def test_biology_settings_reject_non_positive_weights():
         BiologySettings(0.0, 1.0).validate()
     with pytest.raises(ValueError, match="transversion_weight"):
         BiologySettings(1.0, -1.0).validate()
+
+
+def test_biology_settings_reject_invalid_equilibrium_frequencies():
+    """Confirm equilibrium frequencies must be complete, positive, and normalized.
+
+    :return: None.
+    """
+    with pytest.raises(ValueError, match="exactly"):
+        validate_equilibrium_frequencies({"A": 0.25, "C": 0.25, "G": 0.25})
+    with pytest.raises(ValueError, match="greater than zero"):
+        validate_equilibrium_frequencies({"A": 0.25, "C": 0.25, "G": 0.50, "T": 0.0})
+    with pytest.raises(ValueError, match="sum to 1.0"):
+        validate_equilibrium_frequencies({"A": 0.25, "C": 0.25, "G": 0.25, "T": 0.20})
 
 
 def test_load_biology_settings_reads_transition_transversion_weights(tmp_path):
@@ -96,6 +157,39 @@ def test_load_biology_settings_reads_transition_transversion_weights(tmp_path):
     assert settings.transversion_weight == 0.5
 
 
+def test_load_biology_settings_reads_equilibrium_frequencies(tmp_path):
+    """Confirm biology.json nucleotide frequencies are loaded into reusable settings.
+
+    :param tmp_path: Temporary directory for an isolated biology config file.
+    :return: None.
+    """
+    biology_path = tmp_path / "biology.json"
+    biology_path.write_text(
+        json.dumps({
+            "transition_weight": 2.0,
+            "transversion_weight": 1.0,
+            "equilibrium_frequencies": {
+                "A": 0.30,
+                "C": 0.20,
+                "G": 0.20,
+                "T": 0.30,
+            },
+        }),
+        encoding="utf-8",
+    )
+
+    settings = load_biology_settings(biology_path)
+
+    assert settings.transition_weight == 2.0
+    assert settings.transversion_weight == 1.0
+    assert settings.equilibrium_frequencies == {
+        "A": 0.30,
+        "C": 0.20,
+        "G": 0.20,
+        "T": 0.30,
+    }
+
+
 def test_both_simulation_engines_import_the_shared_mutation_routine():
     """Confirm strict and relaxed engines use the shared mutation implementation.
 
@@ -111,7 +205,7 @@ def test_strict_engine_mutate_sequence_uses_shared_mutation_routine(monkeypatch)
     :param monkeypatch: Pytest fixture used to replace the shared mutation routine.
     :return: None.
     """
-    calls: list[tuple[str, float, float]] = []
+    calls: list[tuple[str, float, float, dict[str, float] | None]] = []
 
     def fake_mutate_base(
         base: str,
@@ -119,6 +213,7 @@ def test_strict_engine_mutate_sequence_uses_shared_mutation_routine(monkeypatch)
         transversion_weight: float,
         rng: random.Random | None = None,
         candidates: list[str] | None = None,
+        equilibrium_frequencies: dict[str, float] | None = None,
     ) -> str:
         """Record strict-engine mutation parameters and return a valid substitution.
 
@@ -127,10 +222,11 @@ def test_strict_engine_mutate_sequence_uses_shared_mutation_routine(monkeypatch)
         :param transversion_weight: Relative transversion weight.
         :param rng: Optional random generator supplied by the simulator.
         :param candidates: Optional candidate replacements supplied by the simulator.
+        :param equilibrium_frequencies: Target nucleotide frequencies supplied by the simulator.
         :return: Deterministic replacement nucleotide.
         """
         # Store the values passed by the engine so the assertion can verify delegation.
-        calls.append((base, transition_weight, transversion_weight))
+        calls.append((base, transition_weight, transversion_weight, equilibrium_frequencies))
         return "G"
 
     monkeypatch.setattr(strict_simulator, "mutate_base", fake_mutate_base)
@@ -145,7 +241,7 @@ def test_strict_engine_mutate_sequence_uses_shared_mutation_routine(monkeypatch)
 
     assert sequence == "GGGG"
     assert len(events) == 4
-    assert calls == [("A", 3.0, 1.0)] * 4
+    assert calls == [("A", 3.0, 1.0, BiologySettings().equilibrium_frequencies)] * 4
 
 
 def test_relaxed_engine_mutate_sequence_uses_shared_mutation_routine(monkeypatch):
@@ -154,7 +250,7 @@ def test_relaxed_engine_mutate_sequence_uses_shared_mutation_routine(monkeypatch
     :param monkeypatch: Pytest fixture used to replace the shared mutation routine.
     :return: None.
     """
-    calls: list[tuple[str, float, float, tuple[str, ...]]] = []
+    calls: list[tuple[str, float, float, tuple[str, ...], dict[str, float] | None]] = []
 
     def fake_mutate_base(
         base: str,
@@ -162,6 +258,7 @@ def test_relaxed_engine_mutate_sequence_uses_shared_mutation_routine(monkeypatch
         transversion_weight: float,
         rng: random.Random | None = None,
         candidates: list[str] | None = None,
+        equilibrium_frequencies: dict[str, float] | None = None,
     ) -> str:
         """Record relaxed-engine mutation parameters and return a valid substitution.
 
@@ -170,10 +267,17 @@ def test_relaxed_engine_mutate_sequence_uses_shared_mutation_routine(monkeypatch
         :param transversion_weight: Relative transversion weight.
         :param rng: Optional random generator supplied by the simulator.
         :param candidates: Candidate replacements allowed by relaxed-clock settings.
+        :param equilibrium_frequencies: Target nucleotide frequencies supplied by the simulator.
         :return: Deterministic replacement nucleotide.
         """
         # Candidate recording confirms relaxed-clock filtering is preserved.
-        calls.append((base, transition_weight, transversion_weight, tuple(candidates or ())))
+        calls.append((
+            base,
+            transition_weight,
+            transversion_weight,
+            tuple(candidates or ()),
+            equilibrium_frequencies,
+        ))
         return "G"
 
     monkeypatch.setattr(relaxed_simulator, "mutate_base", fake_mutate_base)
@@ -191,4 +295,4 @@ def test_relaxed_engine_mutate_sequence_uses_shared_mutation_routine(monkeypatch
 
     assert sequence == "GGGG"
     assert len(events) == 4
-    assert calls == [("A", 4.0, 1.0, ("G", "T"))] * 4
+    assert calls == [("A", 4.0, 1.0, ("G", "T"), BiologySettings().equilibrium_frequencies)] * 4
