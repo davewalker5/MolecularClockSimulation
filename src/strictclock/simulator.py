@@ -413,13 +413,14 @@ def mutate_sequence(
 
     for index, base in enumerate(sequence_chars):
         if rng.random() < probability:
-            # The shared helper keeps transition/transversion and frequency weighting consistent.
+            # The shared helper keeps exchangeability and frequency weighting consistent.
             derived = mutate_base(
                 base,
                 biology.transition_weight,
                 biology.transversion_weight,
                 rng,
                 equilibrium_frequencies=biology.equilibrium_frequencies,
+                exchangeability_rates=biology.exchangeability_rates,
             )
             sequence_chars[index] = derived
             events.append(

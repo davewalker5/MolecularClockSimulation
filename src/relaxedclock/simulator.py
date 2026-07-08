@@ -659,7 +659,7 @@ def mutate_sequence(
             if not alternatives:
                 continue
             if is_dna_alphabet(alphabet):
-                # DNA alphabets use the shared transition/transversion and frequency-aware helper.
+                # DNA alphabets use the shared exchangeability and frequency-aware helper.
                 derived = mutate_base(
                     base,
                     biology.transition_weight,
@@ -667,6 +667,7 @@ def mutate_sequence(
                     rng,
                     candidates=alternatives,
                     equilibrium_frequencies=biology.equilibrium_frequencies,
+                    exchangeability_rates=biology.exchangeability_rates,
                 )
             else:
                 # Non-DNA alphabets retain the historical uniform substitution behavior.

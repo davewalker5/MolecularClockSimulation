@@ -1,10 +1,16 @@
 {
-  "transition_weight": 1.0,
-  "transversion_weight": 1.0,
   "equilibrium_frequencies": {
     "A": 0.30,
     "C": 0.20,
     "G": 0.20,
     "T": 0.30
+  },
+  "exchangeability_rates": {
+    "A_C": 1.0,
+    "A_G": 2.0,
+    "A_T": 1.0,
+    "C_G": 1.0,
+    "C_T": 2.0,
+    "G_T": 1.0
   }
 }

@@ -3,7 +3,7 @@
   "number_of_taxa": 8,
   "random_seed": 12345,
   "tree": {
-    "topology": "balanced",
+    "topology": "random",
     "root_age": 1.0
   },
   "clock": {

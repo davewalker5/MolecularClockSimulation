@@ -1,19 +1,31 @@
 from biology.mutation import (
     BiologySettings,
     DEFAULT_EQUILIBRIUM_FREQUENCIES,
+    EXCHANGEABILITY_PAIRS,
+    choose_mutation_target,
+    derive_exchangeability_rates,
+    get_exchangeability_rate,
     is_dna_alphabet,
     load_biology_settings,
     mutate_base,
     normalize_equilibrium_frequencies,
+    normalize_exchangeability_rates,
     validate_equilibrium_frequencies,
+    validate_exchangeability_rates,
 )
 
 __all__ = [
     "BiologySettings",
     "DEFAULT_EQUILIBRIUM_FREQUENCIES",
+    "EXCHANGEABILITY_PAIRS",
+    "choose_mutation_target",
+    "derive_exchangeability_rates",
+    "get_exchangeability_rate",
     "is_dna_alphabet",
     "load_biology_settings",
     "mutate_base",
     "normalize_equilibrium_frequencies",
+    "normalize_exchangeability_rates",
     "validate_equilibrium_frequencies",
+    "validate_exchangeability_rates",
 ]
