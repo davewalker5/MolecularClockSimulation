@@ -1,4 +1,4 @@
-"""Shared transition/transversion-aware nucleotide mutation helpers."""
+"""Shared nucleotide mutation helpers."""
 
 from __future__ import annotations
 
@@ -9,16 +9,13 @@ from pathlib import Path
 from typing import Any, Iterable, Mapping
 
 DNA_BASES = ("A", "C", "G", "T")
+EXCHANGEABILITY_PAIRS = ("A_C", "A_G", "A_T", "C_G", "C_T", "G_T")
 DEFAULT_EQUILIBRIUM_FREQUENCIES = {
     "A": 0.25,
     "C": 0.25,
     "G": 0.25,
     "T": 0.25,
 }
-TRANSITION_PAIRS = frozenset({
-    frozenset({"A", "G"}),
-    frozenset({"C", "T"}),
-})
 PROJECT_PATH = Path(__file__).resolve().parents[2]
 DEFAULT_BIOLOGY_CONFIG_PATH = PROJECT_PATH / "data" / "config" / "biology.json"
 
@@ -30,6 +27,30 @@ class BiologySettings:
     equilibrium_frequencies: dict[str, float] = field(
         default_factory=lambda: dict(DEFAULT_EQUILIBRIUM_FREQUENCIES)
     )
+    exchangeability_rates: dict[str, float] | None = None
+
+    def __post_init__(self) -> None:
+        """Populate exchangeability rates from legacy weights when needed.
+
+        :return: None.
+        """
+        if self.exchangeability_rates is None:
+            # Frozen dataclasses need object.__setattr__ for post-init compatibility setup.
+            object.__setattr__(
+                self,
+                "exchangeability_rates",
+                derive_exchangeability_rates(
+                    self.transition_weight,
+                    self.transversion_weight,
+                ),
+            )
+        else:
+            # Store normalized pair keys so all later lookups share one representation.
+            object.__setattr__(
+                self,
+                "exchangeability_rates",
+                normalize_exchangeability_rates(self.exchangeability_rates),
+            )
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "BiologySettings":
@@ -38,12 +59,33 @@ class BiologySettings:
         :param data: Dictionary containing mutation weighting settings.
         :return: Validated biology settings.
         """
-        # Default to equal weights so existing simulations keep their uniform behavior.
+        transition_transversion = data.get("transition_transversion", {})
+        if transition_transversion is None:
+            transition_transversion = {}
+        if not isinstance(transition_transversion, Mapping):
+            raise ValueError("biology.transition_transversion must be an object")
+
+        # Explicit exchangeabilities are the primary path; legacy weights only fill the gap.
         settings = cls(
-            transition_weight=float(data.get("transition_weight", 1.0)),
-            transversion_weight=float(data.get("transversion_weight", 1.0)),
+            transition_weight=float(
+                data.get(
+                    "transition_weight",
+                    transition_transversion.get("transition_weight", 1.0),
+                )
+            ),
+            transversion_weight=float(
+                data.get(
+                    "transversion_weight",
+                    transition_transversion.get("transversion_weight", 1.0),
+                )
+            ),
             equilibrium_frequencies=normalize_equilibrium_frequencies(
                 data.get("equilibrium_frequencies", DEFAULT_EQUILIBRIUM_FREQUENCIES)
+            ),
+            exchangeability_rates=(
+                normalize_exchangeability_rates(data["exchangeability_rates"])
+                if "exchangeability_rates" in data
+                else None
             ),
         )
         settings.validate()
@@ -54,12 +96,8 @@ class BiologySettings:
 
         :return: None.
         """
-        # Weights are relative probabilities, so zero or negative values are invalid.
-        if self.transition_weight <= 0:
-            raise ValueError("biology.transition_weight must be greater than zero")
-        if self.transversion_weight <= 0:
-            raise ValueError("biology.transversion_weight must be greater than zero")
         validate_equilibrium_frequencies(self.equilibrium_frequencies)
+        validate_exchangeability_rates(self.exchangeability_rates or {})
 
     def to_dict(self) -> dict[str, Any]:
         """Convert biology settings into JSON-serializable data.
@@ -67,9 +105,8 @@ class BiologySettings:
         :return: Dictionary containing mutation weighting settings.
         """
         return {
-            "transition_weight": self.transition_weight,
-            "transversion_weight": self.transversion_weight,
             "equilibrium_frequencies": dict(self.equilibrium_frequencies),
+            "exchangeability_rates": dict(self.exchangeability_rates or {}),
         }
 
 
@@ -100,15 +137,17 @@ def mutate_base(
     rng: random.Random | None = None,
     candidates: Iterable[str] | None = None,
     equilibrium_frequencies: Mapping[str, float] | None = None,
+    exchangeability_rates: Mapping[str, float] | None = None,
 ) -> str:
     """Select a weighted DNA substitution for one nucleotide base.
 
     :param base: Ancestral nucleotide to mutate.
-    :param transition_weight: Relative weight assigned to transition substitutions.
-    :param transversion_weight: Relative weight assigned to transversion substitutions.
+    :param transition_weight: Legacy transition weight used only when exchangeability rates are omitted.
+    :param transversion_weight: Legacy transversion weight used only when exchangeability rates are omitted.
     :param rng: Optional random number generator used for reproducible simulations.
     :param candidates: Optional replacement bases to consider after engine-specific filtering.
     :param equilibrium_frequencies: Optional target frequencies for A, C, G, and T.
+    :param exchangeability_rates: Optional reversible nucleotide-pair exchangeability rates.
     :return: Derived nucleotide selected from valid substitutions.
     """
     active_rng = rng or random
@@ -118,40 +157,68 @@ def mutate_base(
         normalize_equilibrium_frequencies(
             equilibrium_frequencies or DEFAULT_EQUILIBRIUM_FREQUENCIES
         ),
+        (
+            normalize_exchangeability_rates(exchangeability_rates)
+            if exchangeability_rates is not None
+            else None
+        ),
     )
     settings.validate()
-    normalized_base = base.upper()
-    if normalized_base not in DNA_BASES:
-        raise ValueError(f"Cannot apply DNA substitution model to base: {base}")
+    return choose_mutation_target(
+        base,
+        settings.equilibrium_frequencies,
+        settings.exchangeability_rates or {},
+        active_rng,
+        candidates,
+    )
 
-    # Candidate bases default to every DNA base except the ancestral base.
+
+def choose_mutation_target(
+    source: str,
+    equilibrium_frequencies: Mapping[str, float],
+    exchangeability_rates: Mapping[str, float],
+    rng: random.Random,
+    candidates: Iterable[str] | None = None,
+) -> str:
+    """Choose a mutation target using exchangeability and equilibrium frequencies.
+
+    :param source: Current nucleotide before mutation.
+    :param equilibrium_frequencies: Target frequencies for A, C, G, and T.
+    :param exchangeability_rates: Reversible nucleotide-pair exchangeability rates.
+    :param rng: Random number generator used for reproducible simulations.
+    :param candidates: Optional replacement bases to consider after engine-specific filtering.
+    :return: Derived nucleotide selected from valid substitutions.
+    """
+    normalized_frequencies = normalize_equilibrium_frequencies(equilibrium_frequencies)
+    normalized_rates = normalize_exchangeability_rates(exchangeability_rates)
+    normalized_source = normalize_dna_base(source, "source")
+
+    # Candidate bases default to every DNA base except the source base.
     if candidates is None:
-        possible_replacements = [candidate for candidate in DNA_BASES if candidate != normalized_base]
-    else:
         possible_replacements = [
-            candidate.upper()
-            for candidate in candidates
-            if candidate.upper() in DNA_BASES and candidate.upper() != normalized_base
+            candidate for candidate in DNA_BASES if candidate != normalized_source
         ]
+    else:
+        possible_replacements = normalize_candidate_bases(candidates, normalized_source)
+
     if not possible_replacements:
         raise ValueError("At least one valid replacement nucleotide is required")
 
     weighted_replacements = [
         (
             candidate,
-            substitution_weight(
-                normalized_base,
+            get_exchangeability_rate(
+                normalized_source,
                 candidate,
-                settings.transition_weight,
-                settings.transversion_weight,
-            ) * settings.equilibrium_frequencies[candidate],
+                normalized_rates,
+            ) * normalized_frequencies[candidate],
         )
         for candidate in possible_replacements
     ]
 
     # Draw from the cumulative distribution so relative weights become probabilities.
     total_weight = sum(weight for _, weight in weighted_replacements)
-    threshold = active_rng.random() * total_weight
+    threshold = rng.random() * total_weight
     cumulative = 0.0
     for candidate, weight in weighted_replacements:
         cumulative += weight
@@ -160,6 +227,144 @@ def mutate_base(
 
     # Floating-point roundoff can only reach this path at the very end of the interval.
     return weighted_replacements[-1][0]
+
+
+def get_exchangeability_rate(
+    source: str,
+    target: str,
+    exchangeability_rates: Mapping[str, float],
+) -> float:
+    """Return the reversible exchangeability rate for a nucleotide pair.
+
+    :param source: Current nucleotide before mutation.
+    :param target: Candidate nucleotide after mutation.
+    :param exchangeability_rates: Reversible nucleotide-pair exchangeability rates.
+    :return: Exchangeability rate shared by both substitution directions.
+    """
+    normalized_source = normalize_dna_base(source, "source")
+    normalized_target = normalize_dna_base(target, "target")
+    if normalized_source == normalized_target:
+        raise ValueError("source and target nucleotides must not be identical")
+
+    # Sorting the pair makes A_G and G_A resolve to the single configured A_G key.
+    pair_key = "_".join(sorted((normalized_source, normalized_target)))
+    normalized_rates = normalize_exchangeability_rates(exchangeability_rates)
+    return normalized_rates[pair_key]
+
+
+def derive_exchangeability_rates(
+    transition_weight: float,
+    transversion_weight: float,
+) -> dict[str, float]:
+    """Derive exchangeability rates from legacy transition/transversion weights.
+
+    :param transition_weight: Relative weight assigned to transition substitutions.
+    :param transversion_weight: Relative weight assigned to transversion substitutions.
+    :return: Six reversible exchangeability rates keyed by nucleotide pair.
+    """
+    # Legacy weights are relative probabilities, so zero or negative values are invalid.
+    if transition_weight <= 0:
+        raise ValueError("biology.transition_weight must be greater than zero")
+    if transversion_weight <= 0:
+        raise ValueError("biology.transversion_weight must be greater than zero")
+
+    # A-G and C-T were the old transition class; all other pairs were transversions.
+    return {
+        "A_C": float(transversion_weight),
+        "A_G": float(transition_weight),
+        "A_T": float(transversion_weight),
+        "C_G": float(transversion_weight),
+        "C_T": float(transition_weight),
+        "G_T": float(transversion_weight),
+    }
+
+
+def normalize_exchangeability_rates(rates: Mapping[str, Any]) -> dict[str, float]:
+    """Normalize configured exchangeability rates to canonical pair keys.
+
+    :param rates: Mapping containing the six reversible DNA pair rates.
+    :return: Dictionary with canonical uppercase pair keys and float rates.
+    """
+    if not isinstance(rates, Mapping):
+        raise ValueError("biology.exchangeability_rates must be an object")
+
+    normalized: dict[str, float] = {}
+    for pair_key, rate in rates.items():
+        # Pair keys are normalized through nucleotide validation so malformed keys fail clearly.
+        normalized_key = normalize_exchangeability_pair_key(str(pair_key))
+        if normalized_key in normalized:
+            raise ValueError(f"Duplicate exchangeability pair key: {pair_key}")
+        normalized[normalized_key] = float(rate)
+
+    validate_exchangeability_rates(normalized)
+    return normalized
+
+
+def validate_exchangeability_rates(rates: Mapping[str, float]) -> None:
+    """Validate configured reversible nucleotide exchangeability rates.
+
+    :param rates: Mapping containing the six reversible DNA pair rates.
+    :return: None.
+    """
+    # Exchangeability-aware mutation weighting requires one rate per reversible DNA pair.
+    if set(rates) != set(EXCHANGEABILITY_PAIRS):
+        expected = ", ".join(EXCHANGEABILITY_PAIRS)
+        raise ValueError(f"biology.exchangeability_rates must contain exactly: {expected}")
+
+    for pair_key, rate in rates.items():
+        # Rates are relative probabilities, so zero or negative values are invalid.
+        if rate <= 0:
+            raise ValueError(f"biology.exchangeability_rates.{pair_key} must be greater than zero")
+
+
+def normalize_exchangeability_pair_key(pair_key: str) -> str:
+    """Normalize one reversible exchangeability pair key.
+
+    :param pair_key: Pair key such as A_G or g_a.
+    :return: Canonical uppercase pair key with alphabetically ordered nucleotides.
+    """
+    parts = pair_key.upper().split("_")
+    if len(parts) != 2:
+        raise ValueError(f"Invalid exchangeability pair key: {pair_key}")
+
+    left = normalize_dna_base(parts[0], "exchangeability source")
+    right = normalize_dna_base(parts[1], "exchangeability target")
+    if left == right:
+        raise ValueError("exchangeability pair nucleotides must not be identical")
+
+    return "_".join(sorted((left, right)))
+
+
+def normalize_candidate_bases(
+    candidates: Iterable[str],
+    normalized_source: str,
+) -> list[str]:
+    """Normalize mutation candidate bases while excluding the source base.
+
+    :param candidates: Replacement bases supplied by a simulator.
+    :param normalized_source: Uppercase source nucleotide.
+    :return: Candidate replacement bases in caller-supplied order.
+    """
+    possible_replacements: list[str] = []
+    for candidate in candidates:
+        # Invalid candidates are ignored to preserve previous engine filtering behavior.
+        normalized_candidate = str(candidate).upper()
+        if normalized_candidate in DNA_BASES and normalized_candidate != normalized_source:
+            possible_replacements.append(normalized_candidate)
+    return possible_replacements
+
+
+def normalize_dna_base(base: str, label: str) -> str:
+    """Normalize and validate one DNA nucleotide symbol.
+
+    :param base: Nucleotide symbol to normalize.
+    :param label: Name used in validation errors.
+    :return: Uppercase DNA nucleotide symbol.
+    """
+    normalized = str(base).upper()
+    if normalized not in DNA_BASES:
+        raise ValueError(f"Invalid {label} nucleotide: {base}")
+    return normalized
 
 
 def normalize_equilibrium_frequencies(frequencies: Mapping[str, Any]) -> dict[str, float]:
@@ -214,37 +419,6 @@ def math_isclose(left: float, right: float, tolerance: float = 1e-9) -> bool:
     return abs(left - right) <= tolerance
 
 
-def substitution_weight(
-    ancestral_base: str,
-    derived_base: str,
-    transition_weight: float,
-    transversion_weight: float,
-) -> float:
-    """Return the configured weight for one nucleotide substitution.
-
-    :param ancestral_base: Original nucleotide.
-    :param derived_base: Replacement nucleotide.
-    :param transition_weight: Relative weight assigned to transitions.
-    :param transversion_weight: Relative weight assigned to transversions.
-    :return: Weight to use when sampling the replacement nucleotide.
-    """
-    # A substitution is a transition only for A-G or C-T changes.
-    if is_transition(ancestral_base, derived_base):
-        return transition_weight
-    return transversion_weight
-
-
-def is_transition(ancestral_base: str, derived_base: str) -> bool:
-    """Report whether a nucleotide substitution is a transition.
-
-    :param ancestral_base: Original nucleotide.
-    :param derived_base: Replacement nucleotide.
-    :return: True for A-G or C-T changes, otherwise false.
-    """
-    # frozenset makes the classification direction-independent.
-    return frozenset({ancestral_base.upper(), derived_base.upper()}) in TRANSITION_PAIRS
-
-
 def is_dna_alphabet(alphabet: Iterable[str]) -> bool:
     """Report whether an alphabet contains exactly the four DNA bases.
 
@@ -260,11 +434,15 @@ __all__ = [
     "DNA_BASES",
     "DEFAULT_BIOLOGY_CONFIG_PATH",
     "DEFAULT_EQUILIBRIUM_FREQUENCIES",
+    "EXCHANGEABILITY_PAIRS",
+    "choose_mutation_target",
+    "derive_exchangeability_rates",
+    "get_exchangeability_rate",
     "is_dna_alphabet",
-    "is_transition",
     "load_biology_settings",
     "mutate_base",
     "normalize_equilibrium_frequencies",
-    "substitution_weight",
+    "normalize_exchangeability_rates",
     "validate_equilibrium_frequencies",
+    "validate_exchangeability_rates",
 ]
