@@ -1,4 +1,10 @@
 {
   "transition_weight": 1.0,
-  "transversion_weight": 1.0
+  "transversion_weight": 1.0,
+  "equilibrium_frequencies": {
+    "A": 0.30,
+    "C": 0.20,
+    "G": 0.20,
+    "T": 0.30
+  }
 }

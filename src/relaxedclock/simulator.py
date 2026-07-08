@@ -640,7 +640,7 @@ def mutate_sequence(
     :param lineage_rate: Branch-specific substitution rate.
     :param alphabet: Allowed sequence symbols.
     :param allow_back_mutation: Whether a site may revert to its root state.
-    :param biology: Transition/transversion weighting used for DNA substitutions.
+    :param biology: Biology settings used for DNA substitutions.
     :param rng: Random number generator used for mutation decisions.
     :return: Mutated sequence and list of mutation events on the branch.
     """
@@ -659,13 +659,14 @@ def mutate_sequence(
             if not alternatives:
                 continue
             if is_dna_alphabet(alphabet):
-                # DNA alphabets use the shared transition/transversion-aware helper.
+                # DNA alphabets use the shared transition/transversion and frequency-aware helper.
                 derived = mutate_base(
                     base,
                     biology.transition_weight,
                     biology.transversion_weight,
                     rng,
                     candidates=alternatives,
+                    equilibrium_frequencies=biology.equilibrium_frequencies,
                 )
             else:
                 # Non-DNA alphabets retain the historical uniform substitution behavior.
