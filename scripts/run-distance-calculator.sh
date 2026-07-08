@@ -2,7 +2,7 @@
 
 if (( $# < 2 )); then
     scriptname=$(basename -- "$0")
-    echo Usage: $scriptname /path/to/FASTA/file /path/to/output/folder [Hamming|Proportional]
+    echo "Usage: $scriptname /path/to/FASTA/file /path/to/output/folder [Hamming|Proportional]"
     exit 1
 fi
 

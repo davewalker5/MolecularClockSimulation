@@ -7,11 +7,12 @@ import pytest
 from distancematrix import (
     calculate_distance_matrix,
     jc69_distance,
+    kimura_distance,
     read_fasta,
     write_csv,
     write_json,
 )
-from distancematrix.calculator import hamming_distance, write_outputs
+from distancematrix.calculator import count_k80_substitutions, hamming_distance, write_outputs
 from distancematrix.calculator import proportional_distance
 from distancematrix.cli import main
 
@@ -134,6 +135,97 @@ def test_jc69_distance_rejects_invalid_dna_symbols():
         jc69_distance("ACGTNN", "ACGTAA")
 
 
+def test_kimura_distance_returns_zero_for_identical_sequences():
+    """Confirm identical DNA sequences have no K80 corrected evolutionary distance.
+
+    :return: None.
+    """
+    assert kimura_distance("AAAA", "AAAA") == 0.0
+
+
+def test_k80_substitution_counter_classifies_transition_only_differences():
+    """Confirm K80 counts transition substitutions independently of transversions.
+
+    :return: None.
+    """
+    assert count_k80_substitutions("AAGC", "GGGC") == (2, 0)
+
+
+def test_kimura_distance_matches_transition_only_example():
+    """Confirm K80 correction matches the expected formula for transitions only.
+
+    :return: None.
+    """
+    assert kimura_distance("AAGC", "GGGC") == float("inf")
+
+    expected = -0.5 * math.log(1 - (2 * 0.25) - 0) - 0.25 * math.log(1 - 0)
+    assert kimura_distance("AACC", "GACC") == pytest.approx(expected)
+
+
+def test_k80_substitution_counter_classifies_transversion_only_differences():
+    """Confirm K80 counts transversion substitutions independently of transitions.
+
+    :return: None.
+    """
+    assert count_k80_substitutions("AAAA", "CCCC") == (0, 4)
+
+
+def test_kimura_distance_matches_transversion_only_example():
+    """Confirm K80 correction matches the expected formula for transversions only.
+
+    :return: None.
+    """
+    expected = -0.5 * math.log(1 - 0 - 0.25) - 0.25 * math.log(1 - (2 * 0.25))
+
+    assert kimura_distance("AAAA", "ACAA") == pytest.approx(expected)
+
+
+def test_kimura_distance_matches_mixed_substitution_example():
+    """Confirm K80 correction handles transition and transversion substitutions together.
+
+    :return: None.
+    """
+    expected = -0.5 * math.log(1 - (2 * 0.25) - 0.25) - 0.25 * math.log(1 - (2 * 0.25))
+
+    assert count_k80_substitutions("AAAA", "GCAA") == (1, 1)
+    assert kimura_distance("AAAA", "GCAA") == pytest.approx(expected)
+
+
+def test_kimura_distance_rejects_unequal_lengths():
+    """Confirm K80 requires aligned sequences with equal lengths.
+
+    :return: None.
+    """
+    with pytest.raises(ValueError, match="same length"):
+        kimura_distance("ACGT", "ACG")
+
+
+def test_kimura_distance_rejects_invalid_dna_symbols():
+    """Confirm K80 validates DNA symbols before applying the substitution model.
+
+    :return: None.
+    """
+    with pytest.raises(ValueError, match="invalid DNA bases"):
+        kimura_distance("ACGTNN", "ACGTAA")
+
+
+@pytest.mark.parametrize(
+    "first,second",
+    [
+        ("AAAA", "GGGG"),
+        ("AAAA", "CCCC"),
+    ],
+)
+def test_kimura_distance_returns_infinity_when_logarithm_terms_are_undefined(first, second):
+    """Confirm saturated K80 comparisons return infinity instead of raising math errors.
+
+    :param first: First aligned DNA sequence.
+    :param second: Second aligned DNA sequence.
+    :return: None.
+    """
+    assert kimura_distance(first, second) == float("inf")
+
+
 def test_calculate_distance_matrix_returns_jc69_distances():
     """Confirm JC69 distances are returned in a symmetric square matrix.
 
@@ -159,6 +251,37 @@ def test_calculate_distance_matrix_returns_jc69_distances():
     assert matrix["matrix"][0][1] == pytest.approx(-0.75 * math.log(1 - (4 * 0.125 / 3)))
     assert matrix["matrix"][0][2] == pytest.approx(-0.75 * math.log(1 - (4 * 0.25 / 3)))
     assert matrix["matrix"][1][2] == pytest.approx(-0.75 * math.log(1 - (4 * 0.375 / 3)))
+
+
+def test_calculate_distance_matrix_returns_k80_distances():
+    """Confirm K80 distances are returned in a symmetric square matrix.
+
+    :return: None.
+    """
+    matrix = calculate_distance_matrix(
+        {
+            "Species_A": "AAAA",
+            "Species_B": "GAAA",
+            "Species_C": "ACAA",
+        },
+        distance_type="k80",
+    )
+
+    expected_transition = kimura_distance("AAAA", "GAAA")
+    expected_transversion = kimura_distance("AAAA", "ACAA")
+    expected_mixed = kimura_distance("GAAA", "ACAA")
+
+    assert matrix["labels"] == ["Species_A", "Species_B", "Species_C"]
+    assert matrix["distance_metric"] == "k80"
+    assert matrix["matrix"][0][0] == 0.0
+    assert matrix["matrix"][1][1] == 0.0
+    assert matrix["matrix"][2][2] == 0.0
+    assert matrix["matrix"][0][1] == pytest.approx(expected_transition)
+    assert matrix["matrix"][1][0] == pytest.approx(expected_transition)
+    assert matrix["matrix"][0][2] == pytest.approx(expected_transversion)
+    assert matrix["matrix"][2][0] == pytest.approx(expected_transversion)
+    assert matrix["matrix"][1][2] == pytest.approx(expected_mixed)
+    assert matrix["matrix"][2][1] == pytest.approx(expected_mixed)
 
 
 def test_hamming_distance_rejects_unequal_lengths():
@@ -355,6 +478,35 @@ def test_cli_writes_jc69_distance_matrix_files(tmp_path):
     assert rows[1][0] == "Species_A"
     assert float(rows[1][1]) == 0.0
     assert float(rows[1][2]) == pytest.approx(jc69_distance("ACGTACGT", "ACGTTCGT"))
+
+
+def test_cli_writes_k80_distance_matrix_files(tmp_path):
+    """Confirm the CLI can write K80 matrix outputs without changing file formats.
+
+    :return: None.
+    """
+    fasta = tmp_path / "sequences.fasta"
+    output = tmp_path / "output"
+    fasta.write_text(
+        ">Species_A\nAAAA\n>Species_B\nGAAA\n>Species_C\nACAA\n",
+        encoding="utf-8",
+    )
+
+    assert main(["-i", str(fasta), "-o", str(output), "-dt", "k80"]) == 0
+
+    payload = json.loads((output / "distance_matrix.json").read_text(encoding="utf-8"))
+    assert payload["labels"] == ["Species_A", "Species_B", "Species_C"]
+    assert payload["distance_metric"] == "k80"
+    assert payload["matrix"][0][0] == 0.0
+    assert payload["matrix"][0][1] == pytest.approx(kimura_distance("AAAA", "GAAA"))
+    assert payload["matrix"][1][0] == pytest.approx(kimura_distance("GAAA", "AAAA"))
+    with (output / "distance_matrix.csv").open(encoding="utf-8", newline="") as handle:
+        rows = list(csv.reader(handle))
+
+    assert rows[0] == ["", "Species_A", "Species_B", "Species_C"]
+    assert rows[1][0] == "Species_A"
+    assert float(rows[1][1]) == 0.0
+    assert float(rows[1][2]) == pytest.approx(kimura_distance("AAAA", "GAAA"))
 
 
 def test_cli_reports_validation_errors(tmp_path):

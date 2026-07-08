@@ -9,7 +9,11 @@ from pathlib import Path
 from typing import Any
 
 DNA_BASES = frozenset({"A", "C", "G", "T"})
-DISTANCE_TYPES = ("hamming", "proportional", "jc69")
+TRANSITION_PAIRS = frozenset({
+    frozenset({"A", "G"}),
+    frozenset({"C", "T"}),
+})
+DISTANCE_TYPES = ("hamming", "proportional", "jc69", "k80")
 
 
 def read_fasta(path: str | Path) -> dict[str, str]:
@@ -67,7 +71,7 @@ def calculate_distance_matrix(
     """Calculate a pairwise distance matrix for aligned sequences.
 
     :param sequences: Mapping of unique sequence labels to aligned sequence strings.
-    :param distance_type: Distance metric to calculate: hamming, proportional, or jc69.
+    :param distance_type: Distance metric to calculate: hamming, proportional, jc69, or k80.
     :return: Dictionary containing labels, a square distance matrix, and metric name.
     """
     _validate_sequences(sequences)
@@ -101,7 +105,7 @@ def calculate_distance(first: str, second: str, distance_type: str) -> int | flo
 
     :param first: First aligned sequence.
     :param second: Second aligned sequence.
-    :param distance_type: Distance metric to calculate: hamming, proportional, or jc69.
+    :param distance_type: Distance metric to calculate: hamming, proportional, jc69, or k80.
     :return: Numeric distance for the two sequences under the selected metric.
     """
     _validate_distance_type(distance_type)
@@ -111,6 +115,7 @@ def calculate_distance(first: str, second: str, distance_type: str) -> int | flo
         "hamming": hamming_distance,
         "proportional": proportional_distance,
         "jc69": jc69_distance,
+        "k80": kimura_distance,
     }
     return distance_functions[distance_type](first, second)
 
@@ -150,8 +155,8 @@ def jc69_distance(first: str, second: str) -> float:
     :param second: Second aligned DNA sequence containing only A, C, G, and T.
     :return: Estimated substitutions per site, or infinity when saturated.
     """
-    _validate_dna_sequence(first, "first")
-    _validate_dna_sequence(second, "second")
+    _validate_dna_sequence(first, "first", "jc69")
+    _validate_dna_sequence(second, "second", "jc69")
 
     # JC69 starts from the observed proportional distance between aligned DNA sequences.
     observed_distance = proportional_distance(first, second)
@@ -162,6 +167,69 @@ def jc69_distance(first: str, second: str) -> float:
 
     # The correction accounts for unobserved repeated substitutions at the same site.
     return -0.75 * math.log(1 - (4 * observed_distance / 3))
+
+
+def kimura_distance(first: str, second: str) -> float:
+    """Calculate the Kimura two-parameter corrected evolutionary distance.
+
+    :param first: First aligned DNA sequence containing only A, C, G, and T.
+    :param second: Second aligned DNA sequence containing only A, C, G, and T.
+    :return: Estimated substitutions per site, or infinity when saturated.
+    """
+    transitions, transversions = count_k80_substitutions(first, second)
+    sequence_length = len(first)
+
+    # Identical sequences have no observed substitutions and therefore zero distance.
+    if transitions == 0 and transversions == 0:
+        return 0.0
+
+    # K80 separates transition and transversion proportions before correction.
+    transition_proportion = transitions / sequence_length
+    transversion_proportion = transversions / sequence_length
+
+    # Both logarithm arguments must stay positive for the model to be defined.
+    transition_term = 1 - (2 * transition_proportion) - transversion_proportion
+    transversion_term = 1 - (2 * transversion_proportion)
+    if transition_term <= 0 or transversion_term <= 0:
+        return float("inf")
+
+    # The two terms correct hidden substitutions while preserving the transition bias.
+    return (
+        -0.5 * math.log(transition_term)
+        - 0.25 * math.log(transversion_term)
+    )
+
+
+def count_k80_substitutions(first: str, second: str) -> tuple[int, int]:
+    """Count transition and transversion substitutions between aligned DNA sequences.
+
+    :param first: First aligned DNA sequence containing only A, C, G, and T.
+    :param second: Second aligned DNA sequence containing only A, C, G, and T.
+    :return: Tuple containing transition count followed by transversion count.
+    """
+    _validate_dna_sequence(first, "first", "k80")
+    _validate_dna_sequence(second, "second", "k80")
+    if not first:
+        raise ValueError("Sequences must not be empty to calculate K80 distance")
+    if len(first) != len(second):
+        raise ValueError("Sequences must have the same length to calculate K80 distance")
+
+    transitions = 0
+    transversions = 0
+
+    for left, right in zip(first, second, strict=True):
+        # Matching bases are unchanged sites and do not contribute to either count.
+        if left == right:
+            continue
+
+        # A-G and C-T changes are transitions; every other DNA change is a transversion.
+        substitution_pair = frozenset({left, right})
+        if substitution_pair in TRANSITION_PAIRS:
+            transitions += 1
+        else:
+            transversions += 1
+
+    return transitions, transversions
 
 
 def write_json(matrix: dict[str, Any], path: str | Path) -> None:
@@ -277,15 +345,16 @@ def _validate_distance_type(distance_type: str) -> None:
         raise ValueError(f"distance_type must be one of: '{supported}'")
 
 
-def _validate_dna_sequence(sequence: str, sequence_name: str) -> None:
-    """Validate that a sequence contains only JC69-compatible DNA bases.
+def _validate_dna_sequence(sequence: str, sequence_name: str, model_name: str) -> None:
+    """Validate that a sequence contains only model-compatible DNA bases.
 
     :param sequence: Sequence string to validate.
     :param sequence_name: Human-readable name used in validation errors.
+    :param model_name: Distance model name used in validation errors.
     :return: None.
     """
-    # Empty sequence validation is handled by proportional_distance after symbol checks.
+    # Empty-sequence checks are handled by the distance models that require them.
     invalid_bases = sorted(set(sequence) - DNA_BASES)
     if invalid_bases:
         bases = ", ".join(invalid_bases)
-        raise ValueError(f"{sequence_name} sequence contains invalid DNA bases for jc69: {bases}")
+        raise ValueError(f"{sequence_name} sequence contains invalid DNA bases for {model_name}: {bases}")
