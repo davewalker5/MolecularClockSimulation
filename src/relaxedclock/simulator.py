@@ -5,10 +5,12 @@ from __future__ import annotations
 import json
 import math
 import random
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from statistics import mean
 from typing import Any
+
+from biology import BiologySettings, is_dna_alphabet, load_biology_settings, mutate_base
 
 
 @dataclass(frozen=True)
@@ -252,6 +254,7 @@ class RelaxedClockConfig:
     clock: ClockSettings
     mutation: MutationSettings
     outputs: OutputSettings
+    biology: BiologySettings
     raw: dict[str, Any]
 
     @classmethod
@@ -276,6 +279,7 @@ class RelaxedClockConfig:
             clock=ClockSettings.from_dict(data["clock"]),
             mutation=MutationSettings.from_dict(data["mutation"]),
             outputs=OutputSettings.from_dict(data["outputs"]),
+            biology=BiologySettings.from_dict(data.get("biology", {})),
             raw=data,
         )
 
@@ -393,7 +397,12 @@ def load_config(path: str | Path) -> RelaxedClockConfig:
     # The top-level config must be an object so sections can be validated by name.
     if not isinstance(data, dict):
         raise ValueError("Configuration JSON must contain an object")
-    return RelaxedClockConfig.from_dict(data)
+    config = RelaxedClockConfig.from_dict(data)
+    biology = load_biology_settings()
+    raw = {**config.raw, "biology": biology.to_dict()}
+
+    # Attach shared biology settings without changing existing relaxed config files.
+    return replace(config, biology=biology, raw=raw)
 
 
 def run_simulation(config: RelaxedClockConfig) -> RelaxedClockResult:
@@ -607,6 +616,7 @@ def evolve_children(
             child.lineage_rate,
             config.sequence.alphabet,
             config.mutation.allow_back_mutation,
+            config.biology,
             rng,
         )
         evolve_children(child, config, root_sequence, rng)
@@ -619,6 +629,7 @@ def mutate_sequence(
     lineage_rate: float,
     alphabet: tuple[str, ...],
     allow_back_mutation: bool,
+    biology: BiologySettings,
     rng: random.Random,
 ) -> tuple[str, list[RelaxedMutationEvent]]:
     """Apply simple substitutions along one relaxed-clock branch.
@@ -629,6 +640,7 @@ def mutate_sequence(
     :param lineage_rate: Branch-specific substitution rate.
     :param alphabet: Allowed sequence symbols.
     :param allow_back_mutation: Whether a site may revert to its root state.
+    :param biology: Transition/transversion weighting used for DNA substitutions.
     :param rng: Random number generator used for mutation decisions.
     :return: Mutated sequence and list of mutation events on the branch.
     """
@@ -646,7 +658,18 @@ def mutate_sequence(
             alternatives = [candidate for candidate in alphabet if candidate not in excluded]
             if not alternatives:
                 continue
-            derived = rng.choice(alternatives)
+            if is_dna_alphabet(alphabet):
+                # DNA alphabets use the shared transition/transversion-aware helper.
+                derived = mutate_base(
+                    base,
+                    biology.transition_weight,
+                    biology.transversion_weight,
+                    rng,
+                    candidates=alternatives,
+                )
+            else:
+                # Non-DNA alphabets retain the historical uniform substitution behavior.
+                derived = rng.choice(alternatives)
             sequence_chars[index] = derived
             events.append(
                 RelaxedMutationEvent(

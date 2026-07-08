@@ -20,13 +20,13 @@ Detailed documentation, implementation notes and usage guides are available in t
 
 ## Current Features
 
-| Component                          | Description                                                                                                                |
-| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Strict Molecular Clock Simulation  | Simulates sequence evolution under a strict molecular clock, producing synthetic FASTA, Newick and JSON datasets           |
-| Relaxed Molecular Clock Simulation | Simulates lineage-specific mutation rates using a simple autocorrelated relaxed clock model                                |
-| Distance Matrix Calculator         | Generates pairwise Hamming, proportional (p-distance) and Jukes–Cantor (JC69) distance matrices from aligned DNA sequences |
-| Strict Molecular Clock Explorer    | Interactive Streamlit application for exploring strict molecular clock simulations                                         |
-| Relaxed Molecular Clock Explorer   | Interactive Streamlit application for investigating relaxed molecular clock behaviour                                      |
+| Component                          | Description                                                                                                                                             |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Strict Molecular Clock Simulation  | Simulates sequence evolution under a strict molecular clock, producing synthetic FASTA, Newick and JSON datasets                                        |
+| Relaxed Molecular Clock Simulation | Simulates lineage-specific mutation rates using a simple autocorrelated relaxed clock model                                                             |
+| Distance Matrix Calculator         | Generates pairwise Hamming, proportional (p-distance), Jukes–Cantor (JC69) and  Kimura Two-Parameter (K80) distance matrices from aligned DNA sequences |
+| Strict Molecular Clock Explorer    | Interactive Streamlit application for exploring strict molecular clock simulations                                                                      |
+| Relaxed Molecular Clock Explorer   | Interactive Streamlit application for investigating relaxed molecular clock behaviour                                                                   |
 
 ## Documentation
 

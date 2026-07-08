@@ -5,9 +5,11 @@ from __future__ import annotations
 import json
 import math
 import random
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
+
+from biology import BiologySettings, load_biology_settings, mutate_base
 
 BASES = ("A", "C", "G", "T")
 
@@ -22,6 +24,7 @@ class SimulationConfig:
     clock_model: str
     mutation_rate: float
     substitution_model: str
+    biology: BiologySettings
     raw: dict[str, Any]
 
     @classmethod
@@ -35,6 +38,7 @@ class SimulationConfig:
         tree = data.get("tree", {})
         clock = data.get("clock", {})
         substitution = data.get("substitution", {})
+        biology = data.get("biology", {})
 
         # Normalize scalar values into the types used by the simulator.
         config = cls(
@@ -46,6 +50,7 @@ class SimulationConfig:
             clock_model=str(clock.get("model", "strict")),
             mutation_rate=float(clock.get("mutation_rate", 0.0)),
             substitution_model=str(substitution.get("model", "simple")),
+            biology=BiologySettings.from_dict(biology),
             raw=data,
         )
         config.validate()
@@ -172,7 +177,12 @@ def load_config(path: str | Path) -> SimulationConfig:
     # The top-level config must be an object so named sections can be accessed safely.
     if not isinstance(data, dict):
         raise ValueError("Configuration JSON must contain an object")
-    return SimulationConfig.from_dict(data)
+    config = SimulationConfig.from_dict(data)
+    biology = load_biology_settings()
+    raw = {**config.raw, "biology": biology.to_dict()}
+
+    # Attach shared biology settings without requiring legacy config files to change.
+    return replace(config, biology=biology, raw=raw)
 
 
 def run_simulation(config: SimulationConfig) -> SimulationResult:
@@ -190,7 +200,7 @@ def run_simulation(config: SimulationConfig) -> SimulationResult:
     id_counter = _IdCounter()
     root = build_tree(taxa, config.tree_topology, config.root_age, rng, id_counter)
     root.sequence = ancestral_sequence
-    evolve_children(root, config.mutation_rate, rng)
+    evolve_children(root, config.mutation_rate, config.biology, rng)
 
     # Newick export is derived after evolution because branch lengths are already set.
     newick = to_newick(root) + ";"
@@ -354,11 +364,17 @@ def assign_branch_metadata(node: TreeNode) -> None:
         assign_branch_metadata(child)
 
 
-def evolve_children(node: TreeNode, mutation_rate: float, rng: random.Random) -> None:
+def evolve_children(
+    node: TreeNode,
+    mutation_rate: float,
+    biology: BiologySettings,
+    rng: random.Random,
+) -> None:
     """Evolve child sequences from a parent node sequence.
 
     :param node: Parent node whose descendants should be evolved.
     :param mutation_rate: Strict-clock substitution rate per site per unit time.
+    :param biology: Transition/transversion weighting used for substitutions.
     :param rng: Random number generator used for substitutions.
     :return: None.
     """
@@ -368,15 +384,17 @@ def evolve_children(node: TreeNode, mutation_rate: float, rng: random.Random) ->
             node.sequence,
             child.branch_length,
             mutation_rate,
+            biology,
             rng,
         )
-        evolve_children(child, mutation_rate, rng)
+        evolve_children(child, mutation_rate, biology, rng)
 
 
 def mutate_sequence(
     sequence: str,
     branch_length: float,
     mutation_rate: float,
+    biology: BiologySettings,
     rng: random.Random,
 ) -> tuple[str, list[MutationEvent]]:
     """Apply simple nucleotide substitutions along one branch.
@@ -384,6 +402,7 @@ def mutate_sequence(
     :param sequence: Parent sequence at the start of the branch.
     :param branch_length: Evolutionary time represented by the branch.
     :param mutation_rate: Strict-clock substitution rate per site per unit time.
+    :param biology: Transition/transversion weighting used for substitutions.
     :param rng: Random number generator used for mutation decisions.
     :return: Mutated sequence and list of mutation events on the branch.
     """
@@ -394,9 +413,13 @@ def mutate_sequence(
 
     for index, base in enumerate(sequence_chars):
         if rng.random() < probability:
-            # Substitutions must change the base, so remove the current base first.
-            alternatives = [candidate for candidate in BASES if candidate != base]
-            derived = rng.choice(alternatives)
+            # The shared helper keeps transition/transversion weighting consistent.
+            derived = mutate_base(
+                base,
+                biology.transition_weight,
+                biology.transversion_weight,
+                rng,
+            )
             sequence_chars[index] = derived
             events.append(
                 MutationEvent(
