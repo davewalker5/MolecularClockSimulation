@@ -60,6 +60,8 @@ MODEL_EXPLANATIONS = {
     ),
 }
 
+NO_CORRECTION_MODELS = {"hamming", "proportional"}
+
 
 def render_distance_analysis_tab(
     sequences: dict[str, str],
@@ -132,6 +134,7 @@ def render_distance_analysis_tab(
         matrix_payload,
     )
     render_pairwise_summary(summary)
+    render_distance_correction_card(summary)
 
     st.subheader("Distance Matrix")
     heatmap = build_distance_heatmap(matrix_payload, title=MODEL_LABELS[active_model])
@@ -248,6 +251,85 @@ def render_pairwise_summary(summary: dict[str, Any]) -> None:
         st.caption(f"Observed nucleotide frequencies: {frequency_text}")
 
 
+def correction_card_values(summary: dict[str, Any]) -> dict[str, int | float | str]:
+    """Calculate display values for the pairwise distance-correction card.
+
+    :param summary: Pairwise summary returned by pairwise_summary.
+    :return: Dictionary containing observed, corrected, and correction display values.
+    """
+    model = summary["model"]
+    sequence_length = summary["sequence_length"]
+    observed_distance = summary["proportional_distance"]
+
+    # Hamming is a count, so p-distance is the comparable per-site value for this card.
+    corrected_distance = observed_distance if model == "hamming" else summary["estimated_distance"]
+    correction_amount = (
+        float("inf")
+        if is_infinite_distance(corrected_distance)
+        else corrected_distance - observed_distance
+    )
+    hidden_substitutions = (
+        float("inf")
+        if is_infinite_distance(correction_amount)
+        else correction_amount * sequence_length
+    )
+
+    if model in NO_CORRECTION_MODELS:
+        interpretation = "No model correction is applied; observed differences are shown directly."
+    elif is_infinite_distance(corrected_distance):
+        interpretation = (
+            "The selected model treats this comparison as saturated, so a finite "
+            "corrected distance cannot be estimated."
+        )
+    elif correction_amount == 0:
+        interpretation = "The correction is zero because no hidden substitutions are inferred."
+    else:
+        interpretation = (
+            "The corrected estimate is larger than the observed p-distance because "
+            "the model accounts for substitutions hidden by repeated changes at the same site."
+        )
+
+    return {
+        "observed_distance": observed_distance,
+        "corrected_distance": corrected_distance,
+        "correction_amount": correction_amount,
+        "hidden_substitutions": hidden_substitutions,
+        "interpretation": interpretation,
+    }
+
+
+def render_distance_correction_card(summary: dict[str, Any]) -> None:
+    """Render a compact card explaining the model correction for one pairwise comparison.
+
+    :param summary: Pairwise summary returned by pairwise_summary.
+    :return: None.
+    """
+    import streamlit as st
+
+    values = correction_card_values(summary)
+
+    with st.container(border=True):
+        st.markdown("#### Distance Correction")
+        correction_columns = st.columns(4)
+        correction_columns[0].metric(
+            "Observed p-distance",
+            format_distance(values["observed_distance"]),
+        )
+        correction_columns[1].metric(
+            "Corrected distance",
+            format_distance(values["corrected_distance"]),
+        )
+        correction_columns[2].metric(
+            "Added correction",
+            format_signed_distance(values["correction_amount"]),
+        )
+        correction_columns[3].metric(
+            "Hidden substitutions",
+            format_distance(values["hidden_substitutions"]),
+        )
+        st.caption(values["interpretation"])
+
+
 def build_distance_heatmap(matrix_payload: dict[str, Any], *, title: str) -> Any:
     """Build a Plotly heatmap for a calculated distance matrix.
 
@@ -332,6 +414,30 @@ def format_distance(value: int | float) -> str:
     return f"{value:.6g}"
 
 
+def format_signed_distance(value: int | float) -> str:
+    """Format a correction amount with an explicit sign.
+
+    :param value: Numeric correction amount to display.
+    :return: Human-readable signed distance string.
+    """
+    # Infinite corrections are possible when the selected model reports saturation.
+    if is_infinite_distance(value):
+        return "+infinity"
+    if value == 0:
+        return "0"
+    return f"{value:+.6g}"
+
+
+def is_infinite_distance(value: int | float) -> bool:
+    """Return whether a distance value is positive or negative infinity.
+
+    :param value: Numeric distance value to inspect.
+    :return: True when the value is infinite, otherwise False.
+    """
+    # Keep the infinity check reusable across display helpers and card calculations.
+    return isinstance(value, float) and math.isinf(value)
+
+
 def finite_or_none(value: int | float) -> int | float | None:
     """Return finite numeric values and replace infinities with None.
 
@@ -339,6 +445,6 @@ def finite_or_none(value: int | float) -> int | float | None:
     :return: Original finite value, or None when the value is infinite.
     """
     # Plotly cannot colour an infinite value, but hover text still shows the exact estimate.
-    if isinstance(value, float) and math.isinf(value):
+    if is_infinite_distance(value):
         return None
     return value

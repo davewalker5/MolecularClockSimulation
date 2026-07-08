@@ -2,8 +2,10 @@ import pytest
 
 from distancematrix.calculator import calculate_distance_matrix, hky85_distance, kimura_distance
 from molecular_clock_simulation.distance_analysis import (
+    correction_card_values,
     finite_or_none,
     format_distance,
+    format_signed_distance,
     matrix_table_rows,
     model_explanation,
     pairwise_summary,
@@ -85,6 +87,73 @@ def test_format_distance_and_heatmap_values_handle_infinity():
     assert format_distance(float("inf")) == "infinity"
     assert finite_or_none(float("inf")) is None
     assert finite_or_none(0.25) == 0.25
+
+
+def test_correction_card_values_show_model_added_distance():
+    """Confirm corrected models report hidden substitutions beyond p-distance.
+
+    :return: None.
+    """
+    values = correction_card_values({
+        "model": "jc69",
+        "sequence_length": 100,
+        "proportional_distance": 0.25,
+        "estimated_distance": 0.304099,
+    })
+
+    assert values["observed_distance"] == 0.25
+    assert values["corrected_distance"] == 0.304099
+    assert values["correction_amount"] == pytest.approx(0.054099)
+    assert values["hidden_substitutions"] == pytest.approx(5.4099)
+    assert "hidden" in values["interpretation"]
+
+
+def test_correction_card_values_treat_hamming_as_uncorrected():
+    """Confirm Hamming comparisons use p-distance as the comparable card value.
+
+    :return: None.
+    """
+    values = correction_card_values({
+        "model": "hamming",
+        "sequence_length": 20,
+        "proportional_distance": 0.25,
+        "estimated_distance": 5,
+    })
+
+    assert values["observed_distance"] == 0.25
+    assert values["corrected_distance"] == 0.25
+    assert values["correction_amount"] == 0.0
+    assert values["hidden_substitutions"] == 0.0
+    assert "No model correction" in values["interpretation"]
+
+
+def test_correction_card_values_handle_saturated_estimates():
+    """Confirm saturated corrected distances stay explicit in the card values.
+
+    :return: None.
+    """
+    values = correction_card_values({
+        "model": "jc69",
+        "sequence_length": 12,
+        "proportional_distance": 0.75,
+        "estimated_distance": float("inf"),
+    })
+
+    assert values["corrected_distance"] == float("inf")
+    assert values["correction_amount"] == float("inf")
+    assert values["hidden_substitutions"] == float("inf")
+    assert "saturated" in values["interpretation"]
+
+
+def test_format_signed_distance_shows_direction():
+    """Confirm correction amounts include a sign except at zero.
+
+    :return: None.
+    """
+    assert format_signed_distance(0.125) == "+0.125"
+    assert format_signed_distance(-0.125) == "-0.125"
+    assert format_signed_distance(0.0) == "0"
+    assert format_signed_distance(float("inf")) == "+infinity"
 
 
 def test_transition_transversion_ratio_handles_zero_transversions():
