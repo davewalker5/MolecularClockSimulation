@@ -268,6 +268,11 @@ def correction_card_values(summary: dict[str, Any]) -> dict[str, int | float | s
         if is_infinite_distance(corrected_distance)
         else corrected_distance - observed_distance
     )
+    correction_percent = (
+        float("inf")
+        if is_infinite_distance(correction_amount)
+        else correction_amount * 100
+    )
     hidden_substitutions = (
         float("inf")
         if is_infinite_distance(correction_amount)
@@ -293,6 +298,7 @@ def correction_card_values(summary: dict[str, Any]) -> dict[str, int | float | s
         "observed_distance": observed_distance,
         "corrected_distance": corrected_distance,
         "correction_amount": correction_amount,
+        "correction_percent": correction_percent,
         "hidden_substitutions": hidden_substitutions,
         "interpretation": interpretation,
     }
@@ -320,11 +326,11 @@ def render_distance_correction_card(summary: dict[str, Any]) -> None:
             format_distance(values["corrected_distance"]),
         )
         correction_columns[2].metric(
-            "Added correction",
-            format_signed_distance(values["correction_amount"]),
+            "Distance correction",
+            format_signed_percentage(values["correction_percent"]),
         )
         correction_columns[3].metric(
-            "Hidden substitutions",
+            "Estimated hidden substitutions",
             format_distance(values["hidden_substitutions"]),
         )
         st.caption(values["interpretation"])
@@ -414,18 +420,18 @@ def format_distance(value: int | float) -> str:
     return f"{value:.6g}"
 
 
-def format_signed_distance(value: int | float) -> str:
-    """Format a correction amount with an explicit sign.
+def format_signed_percentage(value: int | float) -> str:
+    """Format a correction percentage with an explicit sign.
 
-    :param value: Numeric correction amount to display.
-    :return: Human-readable signed distance string.
+    :param value: Percentage value to display.
+    :return: Human-readable signed percentage string.
     """
     # Infinite corrections are possible when the selected model reports saturation.
     if is_infinite_distance(value):
         return "+infinity"
     if value == 0:
-        return "0"
-    return f"{value:+.6g}"
+        return "0%"
+    return f"{value:+.6g}%"
 
 
 def is_infinite_distance(value: int | float) -> bool:

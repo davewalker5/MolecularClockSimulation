@@ -5,7 +5,7 @@ from molecular_clock_simulation.distance_analysis import (
     correction_card_values,
     finite_or_none,
     format_distance,
-    format_signed_distance,
+    format_signed_percentage,
     matrix_table_rows,
     model_explanation,
     pairwise_summary,
@@ -104,6 +104,7 @@ def test_correction_card_values_show_model_added_distance():
     assert values["observed_distance"] == 0.25
     assert values["corrected_distance"] == 0.304099
     assert values["correction_amount"] == pytest.approx(0.054099)
+    assert values["correction_percent"] == pytest.approx(5.4099)
     assert values["hidden_substitutions"] == pytest.approx(5.4099)
     assert "hidden" in values["interpretation"]
 
@@ -123,6 +124,7 @@ def test_correction_card_values_treat_hamming_as_uncorrected():
     assert values["observed_distance"] == 0.25
     assert values["corrected_distance"] == 0.25
     assert values["correction_amount"] == 0.0
+    assert values["correction_percent"] == 0.0
     assert values["hidden_substitutions"] == 0.0
     assert "No model correction" in values["interpretation"]
 
@@ -141,19 +143,20 @@ def test_correction_card_values_handle_saturated_estimates():
 
     assert values["corrected_distance"] == float("inf")
     assert values["correction_amount"] == float("inf")
+    assert values["correction_percent"] == float("inf")
     assert values["hidden_substitutions"] == float("inf")
     assert "saturated" in values["interpretation"]
 
 
-def test_format_signed_distance_shows_direction():
-    """Confirm correction amounts include a sign except at zero.
+def test_format_signed_percentage_shows_direction():
+    """Confirm correction percentages include a sign except at zero.
 
     :return: None.
     """
-    assert format_signed_distance(0.125) == "+0.125"
-    assert format_signed_distance(-0.125) == "-0.125"
-    assert format_signed_distance(0.0) == "0"
-    assert format_signed_distance(float("inf")) == "+infinity"
+    assert format_signed_percentage(12.5) == "+12.5%"
+    assert format_signed_percentage(-12.5) == "-12.5%"
+    assert format_signed_percentage(0.0) == "0%"
+    assert format_signed_percentage(float("inf")) == "+infinity"
 
 
 def test_transition_transversion_ratio_handles_zero_transversions():
