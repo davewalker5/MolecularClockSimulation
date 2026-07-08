@@ -29,7 +29,7 @@ esac
 # Determine which distance matrix calculation to use and validate the choice
 distance=$(printf '%s' "$3" | tr '[:upper:]' '[:lower:]')
 case "$distance" in
-    hamming|proportional|jc69|k80|f81)
+    hamming|proportional|jc69|k80|f81|hky85)
         ;;
     *)
         echo "Invalid distance calculation: $distance"

@@ -25,7 +25,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("-o", "--output", required=True, type=Path,
                         help="Directory where distance_matrix.json and distance_matrix.csv will be written")
     parser.add_argument("-dt", "--distance-type", choices=DISTANCE_TYPES, default="hamming",
-                        help="Distance metric to calculate: hamming, proportional, jc69, k80, or f81")
+                        help="Distance metric to calculate: hamming, proportional, jc69, k80, f81, or hky85")
     return parser
 
 

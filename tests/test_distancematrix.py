@@ -8,13 +8,14 @@ from distancematrix import (
     calculate_nucleotide_frequencies,
     calculate_distance_matrix,
     f81_distance,
+    hky85_distance,
     jc69_distance,
     kimura_distance,
     read_fasta,
     write_csv,
     write_json,
 )
-from distancematrix.calculator import count_k80_substitutions, hamming_distance, write_outputs
+from distancematrix.calculator import count_hky85_substitutions, count_k80_substitutions, hamming_distance, write_outputs
 from distancematrix.calculator import proportional_distance
 from distancematrix.cli import main
 
@@ -296,6 +297,86 @@ def test_f81_distance_returns_infinity_when_logarithm_term_is_undefined():
     assert f81_distance("AAAA", "CCCC") == float("inf")
 
 
+def test_hky85_distance_returns_zero_for_identical_sequences():
+    """Confirm identical DNA sequences have no HKY85 corrected evolutionary distance.
+
+    :return: None.
+    """
+    assert hky85_distance("ACGTACGT", "ACGTACGT") == 0.0
+
+
+def test_hky85_substitution_counter_classifies_transition_and_transversion_differences():
+    """Confirm HKY85 observes transitions and transversions separately.
+
+    :return: None.
+    """
+    assert count_hky85_substitutions("AACC", "GATG") == (2, 1)
+
+
+def test_hky85_distance_matches_transition_only_example():
+    """Confirm HKY85 correction combines transition bias with observed base frequencies.
+
+    :return: None.
+    """
+    frequencies = calculate_nucleotide_frequencies("AAAACCCC", "GGAACCCC")
+    frequency_factor = 2 * (frequencies["A"] + frequencies["G"]) * (frequencies["C"] + frequencies["T"])
+    transition_proportion = 0.25
+    transversion_proportion = 0.0
+    expected = (
+        -frequency_factor
+        * math.log(1 - (transition_proportion / frequency_factor) - transversion_proportion)
+        - 0.5 * (1 - frequency_factor) * math.log(1 - (2 * transversion_proportion))
+    )
+
+    assert hky85_distance("AAAACCCC", "GGAACCCC") == pytest.approx(expected)
+    assert hky85_distance("AAAACCCC", "GGAACCCC") != pytest.approx(
+        f81_distance("AAAACCCC", "GGAACCCC")
+    )
+
+
+def test_hky85_distance_matches_k80_when_purine_pyrimidine_frequencies_are_balanced():
+    """Confirm HKY85 reduces to K80 when the empirical frequency factor is balanced.
+
+    :return: None.
+    """
+    first = "AAAACCCC"
+    second = "GAAATCCC"
+
+    assert calculate_nucleotide_frequencies(first, second) == {
+        "A": 0.4375,
+        "C": 0.4375,
+        "G": 0.0625,
+        "T": 0.0625,
+    }
+    assert hky85_distance(first, second) == pytest.approx(kimura_distance(first, second))
+
+
+@pytest.mark.parametrize(
+    "first,second",
+    [
+        ("AAAA", "GGGG"),
+        ("AAAA", "CCCC"),
+    ],
+)
+def test_hky85_distance_returns_infinity_when_logarithm_terms_are_undefined(first, second):
+    """Confirm saturated HKY85 comparisons return infinity instead of raising math errors.
+
+    :param first: First aligned DNA sequence.
+    :param second: Second aligned DNA sequence.
+    :return: None.
+    """
+    assert hky85_distance(first, second) == float("inf")
+
+
+def test_hky85_distance_rejects_invalid_dna_symbols():
+    """Confirm HKY85 validates DNA symbols before applying the substitution model.
+
+    :return: None.
+    """
+    with pytest.raises(ValueError, match="invalid DNA bases"):
+        hky85_distance("ACGTNN", "ACGTAA")
+
+
 def test_calculate_distance_matrix_returns_jc69_distances():
     """Confirm JC69 distances are returned in a symmetric square matrix.
 
@@ -374,6 +455,37 @@ def test_calculate_distance_matrix_returns_f81_distances():
 
     assert matrix["labels"] == ["Species_A", "Species_B", "Species_C"]
     assert matrix["distance_metric"] == "f81"
+    assert matrix["matrix"][0][0] == 0.0
+    assert matrix["matrix"][1][1] == 0.0
+    assert matrix["matrix"][2][2] == 0.0
+    assert matrix["matrix"][0][1] == pytest.approx(expected_ab)
+    assert matrix["matrix"][1][0] == pytest.approx(expected_ab)
+    assert matrix["matrix"][0][2] == pytest.approx(expected_ac)
+    assert matrix["matrix"][2][0] == pytest.approx(expected_ac)
+    assert matrix["matrix"][1][2] == pytest.approx(expected_bc)
+    assert matrix["matrix"][2][1] == pytest.approx(expected_bc)
+
+
+def test_calculate_distance_matrix_returns_hky85_distances():
+    """Confirm HKY85 distances are returned in a symmetric square matrix.
+
+    :return: None.
+    """
+    matrix = calculate_distance_matrix(
+        {
+            "Species_A": "AAAACCCC",
+            "Species_B": "GGAACCCC",
+            "Species_C": "AAAATCCC",
+        },
+        distance_type="hky85",
+    )
+
+    expected_ab = hky85_distance("AAAACCCC", "GGAACCCC")
+    expected_ac = hky85_distance("AAAACCCC", "AAAATCCC")
+    expected_bc = hky85_distance("GGAACCCC", "AAAATCCC")
+
+    assert matrix["labels"] == ["Species_A", "Species_B", "Species_C"]
+    assert matrix["distance_metric"] == "hky85"
     assert matrix["matrix"][0][0] == 0.0
     assert matrix["matrix"][1][1] == 0.0
     assert matrix["matrix"][2][2] == 0.0
@@ -637,6 +749,35 @@ def test_cli_writes_f81_distance_matrix_files(tmp_path):
     assert rows[1][0] == "Species_A"
     assert float(rows[1][1]) == 0.0
     assert float(rows[1][2]) == pytest.approx(f81_distance("AAAACCCC", "AAAAGGCC"))
+
+
+def test_cli_writes_hky85_distance_matrix_files(tmp_path):
+    """Confirm the CLI can write HKY85 matrix outputs without changing file formats.
+
+    :return: None.
+    """
+    fasta = tmp_path / "sequences.fasta"
+    output = tmp_path / "output"
+    fasta.write_text(
+        ">Species_A\nAAAACCCC\n>Species_B\nGGAACCCC\n>Species_C\nAAAATCCC\n",
+        encoding="utf-8",
+    )
+
+    assert main(["-i", str(fasta), "-o", str(output), "-dt", "hky85"]) == 0
+
+    payload = json.loads((output / "distance_matrix.json").read_text(encoding="utf-8"))
+    assert payload["labels"] == ["Species_A", "Species_B", "Species_C"]
+    assert payload["distance_metric"] == "hky85"
+    assert payload["matrix"][0][0] == 0.0
+    assert payload["matrix"][0][1] == pytest.approx(hky85_distance("AAAACCCC", "GGAACCCC"))
+    assert payload["matrix"][1][0] == pytest.approx(hky85_distance("GGAACCCC", "AAAACCCC"))
+    with (output / "distance_matrix.csv").open(encoding="utf-8", newline="") as handle:
+        rows = list(csv.reader(handle))
+
+    assert rows[0] == ["", "Species_A", "Species_B", "Species_C"]
+    assert rows[1][0] == "Species_A"
+    assert float(rows[1][1]) == 0.0
+    assert float(rows[1][2]) == pytest.approx(hky85_distance("AAAACCCC", "GGAACCCC"))
 
 
 def test_cli_reports_validation_errors(tmp_path):
