@@ -32,8 +32,9 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     try:
         # Keep parsing and rendering reusable by delegating to the core utility.
-        _ = compare_trees(args.source, args.reconstructed, args.output)
+        output_path = compare_trees(args.source, args.reconstructed, args.output)
     except (OSError, RuntimeError, ValueError) as error:
         raise SystemExit(f"Error: {error}") from error
 
+    print(f"Wrote tree comparison: {output_path}")
     return 0

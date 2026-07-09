@@ -17,6 +17,11 @@ from molecular_clock_simulation.distance_analysis import (
     render_distance_analysis_controls,
     render_distance_analysis_tab,
 )
+from molecular_clock_simulation.reconstruction import (
+    reconstructed_tree_newick,
+    reconstructed_tree_to_dot,
+    reconstruct_upgma_tree,
+)
 from relaxedclock.simulator import (
     RelaxedClockConfig,
     RelaxedClockResult,
@@ -633,7 +638,17 @@ def render_app() -> None:
 
     sidebar_tab_key = "relaxed_sidebar_tab"
     main_tab_key = "relaxed_main_tab"
-    main_tab_labels = ["FASTA Sequences", "Newick Output", "Distance Analysis", "Downloads"]
+    reconstruction_warning_key = "relaxed_reconstruction_warning"
+    reconstruction_error_key = "relaxed_reconstruction_error"
+    reconstruction_dot_key = "relaxed_reconstruction_dot"
+    reconstruction_newick_key = "relaxed_reconstruction_newick"
+    main_tab_labels = [
+        "FASTA Sequences",
+        "Newick Output",
+        "Distance Analysis",
+        "Reconstruction",
+        "Downloads",
+    ]
 
     def sync_main_tab_from_sidebar() -> None:
         """Select the matching main output tab when the sidebar tab changes."""
@@ -642,6 +657,8 @@ def render_app() -> None:
             st.session_state[main_tab_key] = "FASTA Sequences"
         elif sidebar_tab == "Distance":
             st.session_state[main_tab_key] = "Distance Analysis"
+        elif sidebar_tab == "Reconstruction":
+            st.session_state[main_tab_key] = "Reconstruction"
 
     def sync_sidebar_tab_from_main() -> None:
         """Select the matching sidebar tab when the main output tab changes."""
@@ -650,10 +667,12 @@ def render_app() -> None:
             st.session_state[sidebar_tab_key] = "Simulation"
         elif main_tab == "Distance Analysis":
             st.session_state[sidebar_tab_key] = "Distance"
+        elif main_tab == "Reconstruction":
+            st.session_state[sidebar_tab_key] = "Reconstruction"
 
     with st.sidebar:
-        simulation_sidebar_tab, distance_sidebar_tab = st.tabs(
-            ["Simulation", "Distance"],
+        simulation_sidebar_tab, distance_sidebar_tab, reconstruction_sidebar_tab = st.tabs(
+            ["Simulation", "Distance", "Reconstruction"],
             key=sidebar_tab_key,
             on_change=sync_main_tab_from_sidebar,
         )
@@ -789,6 +808,41 @@ def render_app() -> None:
             state_key_prefix="relaxed",
         )
 
+    with reconstruction_sidebar_tab:
+        st.header("Reconstruction")
+        st.selectbox(
+            "Algorithm",
+            options=("UPGMA",),
+            key="relaxed_reconstruction_algorithm",
+        )
+        if st.button("Reconstruct Tree", key="relaxed_reconstruct_tree", width="stretch"):
+            st.session_state[main_tab_key] = "Reconstruction"
+            matrix_payload = st.session_state.get("relaxed_distance_matrix")
+            if matrix_payload is None:
+                st.session_state[reconstruction_warning_key] = True
+                st.session_state.pop(reconstruction_error_key, None)
+                st.session_state.pop(reconstruction_dot_key, None)
+                st.session_state.pop(reconstruction_newick_key, None)
+            else:
+                try:
+                    reconstructed_tree = reconstruct_upgma_tree(matrix_payload)
+                except ValueError as error:
+                    st.session_state[reconstruction_warning_key] = False
+                    st.session_state[reconstruction_error_key] = str(error)
+                    st.session_state.pop(reconstruction_dot_key, None)
+                    st.session_state.pop(reconstruction_newick_key, None)
+                else:
+                    st.session_state[reconstruction_warning_key] = False
+                    st.session_state.pop(reconstruction_error_key, None)
+                    st.session_state[reconstruction_dot_key] = reconstructed_tree_to_dot(
+                        reconstructed_tree,
+                        graph_name="relaxed_reconstructed_tree",
+                        colors=DARK_THEME,
+                    )
+                    st.session_state[reconstruction_newick_key] = reconstructed_tree_newick(
+                        reconstructed_tree
+                    )
+
     # The tree is the primary visual output for this explorer release.
     st.subheader("Phylogenetic Tree")
     st.markdown(tree_svg, unsafe_allow_html=True)
@@ -813,7 +867,7 @@ def render_app() -> None:
         f"Newick branch lengths: {html.escape(summary['newick_branch_lengths'])}"
     )
 
-    sequence_tab, newick_tab, distance_tab, download_tab = st.tabs(
+    sequence_tab, newick_tab, distance_tab, reconstruction_tab, download_tab = st.tabs(
         main_tab_labels,
         key=main_tab_key,
         on_change=sync_sidebar_tab_from_main,
@@ -827,6 +881,18 @@ def render_app() -> None:
             result.terminal_sequences,
             state_key_prefix="relaxed",
         )
+    with reconstruction_tab:
+        if (
+            st.session_state.get(reconstruction_warning_key)
+            and st.session_state.get("relaxed_distance_matrix") is None
+        ):
+            st.warning("You must calculate a distance matrix before reconstructing a tree")
+        elif st.session_state.get(reconstruction_error_key):
+            st.warning(st.session_state[reconstruction_error_key])
+        elif st.session_state.get(reconstruction_dot_key):
+            st.graphviz_chart(st.session_state[reconstruction_dot_key], width="stretch")
+            with st.expander("Reconstructed Newick"):
+                st.code(st.session_state[reconstruction_newick_key], language="text")
     with download_tab:
         # A single selector and button avoids four competing download controls.
         download_selection = st.selectbox(
