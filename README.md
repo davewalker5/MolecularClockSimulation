@@ -6,9 +6,9 @@
 
 # Molecular Clock Simulation
 
-<img src="https://github.com/davewalker5/MolecularClockSimulation/blob/main/diagrams/relaxed-clock-explorer.png" width="100%">
+<img src="https://github.com/davewalker5/MolecularClockSimulation/blob/main/diagrams/relaxed-clock-explorer-simulation.png" width="100%">
 
-A Python toolkit for simulating sequence evolution, exploring molecular clock models and implementing phylogenetic reconstruction algorithms from first principles.
+A Python toolkit for simulating sequence evolution, analysing evolutionary distances and exploring distance-based phylogenetic reconstruction from first principles.
 
 ## Overview
 
@@ -20,13 +20,13 @@ Detailed documentation, implementation notes and usage guides are available in t
 
 ## Current Features
 
-| Component                          | Description                                                                                                                                             |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Strict Molecular Clock Simulation  | Simulates sequence evolution under a strict molecular clock, producing synthetic FASTA, Newick and JSON datasets                                        |
-| Relaxed Molecular Clock Simulation | Simulates lineage-specific mutation rates using a simple autocorrelated relaxed clock model                                                             |
-| Distance Matrix Calculator | Generates pairwise evolutionary distance matrices from aligned DNA sequences using a selection of nucleotide substitution models |
-| Strict Molecular Clock Explorer    | Interactive Streamlit application for exploring strict molecular clock simulations                                                                      |
-| Relaxed Molecular Clock Explorer   | Interactive Streamlit application for investigating relaxed molecular clock behaviour                                                                   |
+| Component                      | Purpose                                                            |
+| ------------------------------ | ------------------------------------------------------------------ |
+| Strict Molecular Clock Engine  | Simulate ultrametric evolutionary histories                        |
+| Relaxed Molecular Clock Engine | Simulate lineage-specific rate variation                           |
+| Distance Matrix Calculator     | Estimate evolutionary distances using multiple substitution models |
+| UPGMA Reconstruction           | Reconstruct phylogenetic trees from distance matrices              |
+| Interactive Explorers          | Combine the complete workflow into an educational environment      |
 
 ## Documentation
 
