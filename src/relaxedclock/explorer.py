@@ -618,8 +618,32 @@ def render_app() -> None:
     st.markdown(dark_theme_css(), unsafe_allow_html=True)
     st.title("Relaxed Molecular Clock Explorer")
 
+    sidebar_tab_key = "relaxed_sidebar_tab"
+    main_tab_key = "relaxed_main_tab"
+    main_tab_labels = ["FASTA Sequences", "Newick Output", "Distance Analysis", "Downloads"]
+
+    def sync_main_tab_from_sidebar() -> None:
+        """Select the matching main output tab when the sidebar tab changes."""
+        sidebar_tab = st.session_state.get(sidebar_tab_key)
+        if sidebar_tab == "Simulation":
+            st.session_state[main_tab_key] = "FASTA Sequences"
+        elif sidebar_tab == "Distance":
+            st.session_state[main_tab_key] = "Distance Analysis"
+
+    def sync_sidebar_tab_from_main() -> None:
+        """Select the matching sidebar tab when the main output tab changes."""
+        main_tab = st.session_state.get(main_tab_key)
+        if main_tab in {"FASTA Sequences", "Newick Output"}:
+            st.session_state[sidebar_tab_key] = "Simulation"
+        elif main_tab == "Distance Analysis":
+            st.session_state[sidebar_tab_key] = "Distance"
+
     with st.sidebar:
-        simulation_sidebar_tab, distance_sidebar_tab = st.tabs(["Simulation", "Distance"])
+        simulation_sidebar_tab, distance_sidebar_tab = st.tabs(
+            ["Simulation", "Distance"],
+            key=sidebar_tab_key,
+            on_change=sync_main_tab_from_sidebar,
+        )
 
     with simulation_sidebar_tab:
         st.header("Simulation")
@@ -777,7 +801,9 @@ def render_app() -> None:
     )
 
     sequence_tab, newick_tab, distance_tab, download_tab = st.tabs(
-        ["FASTA Sequences", "Newick Output", "Distance Analysis", "Downloads"]
+        main_tab_labels,
+        key=main_tab_key,
+        on_change=sync_sidebar_tab_from_main,
     )
     with sequence_tab:
         st.code(fasta, language="text")
