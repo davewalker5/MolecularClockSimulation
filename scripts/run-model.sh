@@ -43,4 +43,5 @@ python -m "${model}clock" --config "$1"
 
 for distance in "${DISTANCE_TYPES[@]}"; do
     python -m distancematrix --input "$terminal_sequences" --output "$output_folder" --distance-type "$distance"
+    python -m phylogeny --input "$output_folder/distance_matrix_${distance}.json"
 done

@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from phylogeny.upgma import load_distance_matrix, upgma, write_newick
+from phylogeny.upgma import load_distance_matrix_with_metric, upgma, write_newick
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -13,10 +13,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     :return: Configured parser for the UPGMA command.
     """
-    # Keep the initial interface limited to one matrix input and one tree output.
+    # Only the matrix is required because its metric determines the default output name.
     parser = argparse.ArgumentParser()
     parser.add_argument("-i", "--input", required=True, type=Path, help="Path to a distance_matrix_<type>.json file")
-    parser.add_argument("-o", "--output", required=True, type=Path, help="Path where the Newick tree will be written")
+    parser.add_argument("-o", "--output", type=Path, help="Newick output path")
     return parser
 
 
@@ -29,11 +29,15 @@ def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
 
     try:
-        # Keep reconstruction reusable by delegating all substantive work to the core module.
-        labels, matrix = load_distance_matrix(args.input)
-        output_path = write_newick(upgma(labels, matrix), args.output)
+        # Read the metric with the matrix so an omitted output has a deterministic filename.
+        labels, matrix, distance_metric = load_distance_matrix_with_metric(args.input)
+        destination = (
+            args.output
+            if args.output is not None
+            else args.input.parent / f"upgma_{distance_metric}.newick"
+        )
+        _ = write_newick(upgma(labels, matrix), destination)
     except (ValueError, OSError) as error:
         raise SystemExit(f"Error: {error}") from error
 
-    print(f"Wrote Newick tree: {output_path}")
     return 0

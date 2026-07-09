@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-if (( $# != 2 )); then
+if (( $# < 1 || $# > 2 )); then
     scriptname=$(basename -- "$0")
-    echo Usage: $scriptname /path/to/distance/matrix.json /path/to/output/tree
+    echo Usage: $scriptname /path/to/distance/matrix.json [/path/to/output/tree.newick]
     exit 1
 fi
 
@@ -11,4 +11,8 @@ cd "$PROJECT_ROOT"
 
 export PYTHONPATH="$PROJECT_ROOT/src"
 
-python -m phylogeny --input "$1" --output "$2"
+if (( $# == 2 )); then
+    python -m phylogeny --input "$1" --output "$2"
+else
+    python -m phylogeny --input "$1"
+fi
