@@ -219,7 +219,14 @@ def test_cli_writes_newick_output(tmp_path):
         encoding="utf-8",
     )
 
-    assert main(["--input", str(input_path), "--output", str(output_path)]) == 0
+    assert main([
+        "--input",
+        str(input_path),
+        "--output",
+        str(output_path),
+        "--method",
+        "upgma",
+    ]) == 0
     assert output_path.read_text(encoding="utf-8") == "(A:1.000000,B:1.000000);\n"
 
 
@@ -240,7 +247,7 @@ def test_cli_defaults_output_from_distance_metric(tmp_path):
         encoding="utf-8",
     )
 
-    assert main(["--input", str(input_path)]) == 0
+    assert main(["--input", str(input_path), "--method", "upgma"]) == 0
     assert expected_output.read_text(encoding="utf-8") == "(A:1.000000,B:1.000000);\n"
 
 
@@ -261,4 +268,4 @@ def test_cli_default_output_requires_safe_distance_metric(tmp_path):
     )
 
     with pytest.raises(SystemExit, match="filename-safe 'distance_metric'"):
-        main(["--input", str(input_path)])
+        main(["--input", str(input_path), "--method", "upgma"])

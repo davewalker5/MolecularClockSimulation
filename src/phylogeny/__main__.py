@@ -1,4 +1,4 @@
-"""Module entry point for UPGMA tree reconstruction."""
+"""Module entry point for phylogenetic tree reconstruction."""
 
 from phylogeny.cli import main
 

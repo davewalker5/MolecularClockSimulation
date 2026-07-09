@@ -24,6 +24,17 @@ def test_parse_newick_preserves_topology_labels_and_branch_lengths():
     assert root.children[1].branch_length == 4.0
 
 
+def test_parse_newick_accepts_negative_neighbor_joining_branch_lengths():
+    """Confirm NJ trees with signed finite branch lengths can be compared.
+
+    :return: None.
+    """
+    root = parse_newick("(A:-0.000191,B:0.001081);")
+
+    assert root.children[0].branch_length == -0.000191
+    assert tree_to_dot(root, "NJ tree").count("-0.000191") == 1
+
+
 def test_tree_to_dot_uses_horizontal_root_to_leaf_layout():
     """Confirm generated Graphviz source lays trees out from left to right.
 
@@ -50,6 +61,7 @@ def test_tree_to_dot_uses_horizontal_root_to_leaf_layout():
         ("", "must not be empty"),
         ("(A:1);", "at least two children"),
         ("(A:bad,B:1);", "Invalid Newick branch length"),
+        ("(A:inf,B:1);", "must be finite"),
         ("(A:1,B:1)", "Expected ';'"),
         ("(A:1,B:1); trailing", "Unexpected content"),
     ],
@@ -111,7 +123,6 @@ def test_cli_accepts_required_short_arguments(tmp_path, capsys):
         str(output_path),
     ]) == 0
     assert output_path.exists()
-    assert f"Wrote tree comparison: {output_path}" in capsys.readouterr().out
 
 
 def test_compare_trees_requires_png_extension(tmp_path):

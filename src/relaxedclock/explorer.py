@@ -20,7 +20,7 @@ from molecular_clock_simulation.distance_analysis import (
 from molecular_clock_simulation.reconstruction import (
     reconstructed_tree_newick,
     reconstructed_tree_to_dot,
-    reconstruct_upgma_tree,
+    reconstruct_tree,
 )
 from relaxedclock.simulator import (
     RelaxedClockConfig,
@@ -812,7 +812,7 @@ def render_app() -> None:
         st.header("Reconstruction")
         st.selectbox(
             "Algorithm",
-            options=("UPGMA",),
+            options=("UPGMA", "Neighbor Joining"),
             key="relaxed_reconstruction_algorithm",
         )
         if st.button("Reconstruct Tree", key="relaxed_reconstruct_tree", width="stretch"):
@@ -825,7 +825,10 @@ def render_app() -> None:
                 st.session_state.pop(reconstruction_newick_key, None)
             else:
                 try:
-                    reconstructed_tree = reconstruct_upgma_tree(matrix_payload)
+                    reconstructed_tree = reconstruct_tree(
+                        matrix_payload,
+                        method=st.session_state["relaxed_reconstruction_algorithm"],
+                    )
                 except ValueError as error:
                     st.session_state[reconstruction_warning_key] = False
                     st.session_state[reconstruction_error_key] = str(error)

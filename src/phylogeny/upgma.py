@@ -18,8 +18,10 @@ class Cluster:
     :param height: Distance from every descendant tip to this cluster.
     :param left: First child cluster, or None for a leaf.
     :param right: Second child cluster, or None for a leaf.
+    :param third: Optional third child cluster for an unrooted NJ final node.
     :param left_branch_length: Branch length from this cluster to its left child.
     :param right_branch_length: Branch length from this cluster to its right child.
+    :param third_branch_length: Branch length from this cluster to its third child.
     """
 
     name: str
@@ -27,8 +29,10 @@ class Cluster:
     height: float
     left: Cluster | None = None
     right: Cluster | None = None
+    third: Cluster | None = None
     left_branch_length: float | None = None
     right_branch_length: float | None = None
+    third_branch_length: float | None = None
 
 
 def validate_distance_matrix(labels: list[str], matrix: list[list[float]]) -> None:
@@ -248,20 +252,25 @@ def to_newick(cluster: Cluster) -> str:
         :return: Newick fragment for the node.
         """
         # Leaves contribute their label; internal nodes recursively contribute two children.
-        if node.left is None and node.right is None:
+        if node.left is None and node.right is None and node.third is None:
             return _quote_newick_label(node.name)
-        if (
-            node.left is None
-            or node.right is None
-            or node.left_branch_length is None
-            or node.right_branch_length is None
-        ):
-            raise ValueError("Internal clusters must have two children and two branch lengths")
+        children = [
+            (node.left, node.left_branch_length),
+            (node.right, node.right_branch_length),
+            (node.third, node.third_branch_length),
+        ]
+        child_fragments = []
+        for child, branch_length in children:
+            # NJ uses a three-way final node, while UPGMA uses binary internal nodes.
+            if child is None and branch_length is None:
+                continue
+            if child is None or branch_length is None:
+                raise ValueError("Internal clusters must pair every child with a branch length")
+            child_fragments.append(f"{render(child)}:{branch_length:.6f}")
+        if len(child_fragments) < 2:
+            raise ValueError("Internal clusters must have at least two children")
 
-        return (
-            f"({render(node.left)}:{node.left_branch_length:.6f},"
-            f"{render(node.right)}:{node.right_branch_length:.6f})"
-        )
+        return f"({','.join(child_fragments)})"
 
     # Newick represents the root by the outermost group and a terminating semicolon.
     return f"{render(cluster)};"
