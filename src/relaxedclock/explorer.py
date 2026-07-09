@@ -13,6 +13,7 @@ from pathlib import PurePath
 from typing import Any
 
 from molecular_clock_simulation.distance_analysis import (
+    distance_matrix_csv_text,
     render_distance_analysis_controls,
     render_distance_analysis_tab,
 )
@@ -28,9 +29,11 @@ from strictclock.explorer import DARK_THEME, dark_theme_css
 
 DOWNLOAD_OPTIONS = (
     "FASTA",
-    "Newick",
+    "Newick (True Tree)",
     "Metadata JSON",
     "Tree PNG",
+    "Distance Matrix (JSON)",
+    "Distance Matrix (CSV)",
 )
 
 BRANCH_LENGTH_LABELS = {
@@ -559,6 +562,7 @@ def download_payload(
     metadata: str,
     tree_dot: str | RelaxedTreeNode,
     branch_lengths: str = "genetic_change",
+    distance_matrix: dict[str, Any] | None = None,
 ) -> tuple[str | bytes, str, str]:
     """Return data, extension, and MIME type for one download option.
 
@@ -568,17 +572,26 @@ def download_payload(
     :param metadata: Pre-rendered metadata JSON for the result.
     :param tree_dot: DOT source or relaxed tree root for the generated tree.
     :param branch_lengths: Branch value used to scale tree image downloads.
+    :param distance_matrix: Calculated distance matrix payload, when available.
     :return: Tuple of download data, filename extension, and MIME type.
     """
     # Centralize option handling so the UI and tests share one source of truth.
     if selection == "FASTA":
         return fasta, "fasta", "text/plain"
-    if selection == "Newick":
+    if selection == "Newick (True Tree)":
         return result.newick + "\n", "newick", "text/plain"
     if selection == "Metadata JSON":
         return metadata, "json", "application/json"
     if selection == "Tree PNG":
         return tree_png_bytes(tree_dot, branch_lengths), "png", "image/png"
+    if selection == "Distance Matrix (JSON)":
+        if distance_matrix is None:
+            raise ValueError("You must calculate a distance matrix before downloading it.")
+        return json.dumps(distance_matrix, indent=2) + "\n", "json", "application/json"
+    if selection == "Distance Matrix (CSV)":
+        if distance_matrix is None:
+            raise ValueError("You must calculate a distance matrix before downloading it.")
+        return distance_matrix_csv_text(distance_matrix), "csv", "text/csv"
     raise ValueError(f"Unknown download selection: {selection}")
 
 
@@ -848,7 +861,14 @@ def render_app() -> None:
                     metadata=metadata,
                     tree_dot=result.root,
                     branch_lengths=branch_lengths,
+                    distance_matrix=st.session_state.get("relaxed_distance_matrix"),
                 )
+            except ValueError as error:
+                if download_selection in {"Distance Matrix (JSON)", "Distance Matrix (CSV)"}:
+                    if st.button("Download", width="stretch"):
+                        st.warning(str(error))
+                else:
+                    st.warning(str(error))
             except (RuntimeError, subprocess.CalledProcessError) as error:
                 st.warning(f"{download_selection} export is unavailable: {error}")
             else:

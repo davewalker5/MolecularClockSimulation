@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import csv
+import io
 import math
 from typing import Any
 
@@ -183,6 +185,23 @@ def selected_distance_model(state_key_prefix: str) -> str:
         next(iter(DISTANCE_MODEL_OPTIONS)),
     )
     return DISTANCE_MODEL_OPTIONS[selected_label]
+
+
+def distance_matrix_csv_text(matrix_payload: dict[str, Any]) -> str:
+    """Serialize a distance matrix payload as CSV text.
+
+    :param matrix_payload: Matrix payload returned by calculate_distance_matrix.
+    :return: CSV text with a leading blank header cell for row labels.
+    """
+    output = io.StringIO()
+    writer = csv.writer(output)
+    labels = matrix_payload["labels"]
+
+    writer.writerow(["", *labels])
+    for label, row in zip(labels, matrix_payload["matrix"], strict=True):
+        writer.writerow([label, *row])
+
+    return output.getvalue()
 
 
 def pairwise_summary(
