@@ -212,6 +212,9 @@ def test_relaxed_explorer_helpers_render_current_simulation_result():
     assert "Newick time" in time_dot
     assert time_dot != dot
     assert svg.startswith("<svg")
+    assert 'class="relaxed-clock-tree"' in svg
+    assert ".relaxed-clock-tree .node" in svg
+    assert "<style>.node{" not in svg
     assert "genetic" in svg
     assert "time" in time_svg
     assert time_svg != svg

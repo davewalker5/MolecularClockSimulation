@@ -225,17 +225,17 @@ def tree_to_svg(root: RelaxedTreeNode, branch_lengths: str = "genetic_change") -
     colors = DARK_THEME
     layout = build_tree_layout(root, branch_lengths)
     lines = [
-        f'<svg viewBox="0 0 {layout.width} {layout.height}" '
+        f'<svg class="relaxed-clock-tree" viewBox="0 0 {layout.width} {layout.height}" '
         'xmlns="http://www.w3.org/2000/svg" role="img" '
         f'aria-label="Relaxed molecular clock tree scaled by {html.escape(branch_lengths)}">',
         f'<rect width="100%" height="100%" fill="{colors["page_bg"]}" />',
         '<style>'
-        '.branch{fill:none;stroke:#94a3b8;stroke-width:2.2;stroke-linecap:round;}'
-        '.node{fill:#e5e7eb;stroke:#0b1220;stroke-width:1.5;}'
-        '.leaf{fill:#0b1220;stroke:#e5e7eb;stroke-width:1.8;}'
-        '.leaf-label{fill:#e5e7eb;font:14px Helvetica,Arial,sans-serif;}'
-        '.node-label{fill:#94a3b8;font:10px Helvetica,Arial,sans-serif;}'
-        '.branch-label{fill:#cbd5e1;font:10px Helvetica,Arial,sans-serif;}'
+        '.relaxed-clock-tree .branch{fill:none;stroke:#94a3b8;stroke-width:2.2;stroke-linecap:round;}'
+        '.relaxed-clock-tree .node{fill:#e5e7eb;stroke:#0b1220;stroke-width:1.5;}'
+        '.relaxed-clock-tree .leaf{fill:#0b1220;stroke:#e5e7eb;stroke-width:1.8;}'
+        '.relaxed-clock-tree .leaf-label{fill:#e5e7eb;font:14px Helvetica,Arial,sans-serif;}'
+        '.relaxed-clock-tree .node-label{fill:#94a3b8;font:10px Helvetica,Arial,sans-serif;}'
+        '.relaxed-clock-tree .branch-label{fill:#cbd5e1;font:10px Helvetica,Arial,sans-serif;}'
         '</style>',
     ]
 
