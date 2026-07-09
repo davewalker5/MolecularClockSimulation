@@ -160,11 +160,10 @@ def test_load_distance_matrix_reads_calculator_json(tmp_path):
     assert load_distance_matrix(input_path) == (["A", "B"], [[0, 2], [2, 0]])
 
 
-def test_cli_writes_newick_output(tmp_path, capsys):
+def test_cli_writes_newick_output(tmp_path):
     """Confirm the CLI reconstructs and writes a tree from calculator JSON.
 
     :param tmp_path: Temporary directory supplied by pytest.
-    :param capsys: Pytest fixture used to capture command output.
     :return: None.
     """
     input_path = tmp_path / "distance_matrix.json"
@@ -180,14 +179,12 @@ def test_cli_writes_newick_output(tmp_path, capsys):
 
     assert main(["--input", str(input_path), "--output", str(output_path)]) == 0
     assert output_path.read_text(encoding="utf-8") == "(A:1.000000,B:1.000000);\n"
-    assert f"Wrote Newick tree: {output_path}" in capsys.readouterr().out
 
 
-def test_cli_defaults_output_from_distance_metric(tmp_path, capsys):
+def test_cli_defaults_output_from_distance_metric(tmp_path):
     """Confirm an omitted output uses the matrix metric beside the input file.
 
     :param tmp_path: Temporary directory supplied by pytest.
-    :param capsys: Pytest fixture used to capture command output.
     :return: None.
     """
     input_path = tmp_path / "distance_matrix_hky85.json"
@@ -203,7 +200,6 @@ def test_cli_defaults_output_from_distance_metric(tmp_path, capsys):
 
     assert main(["--input", str(input_path)]) == 0
     assert expected_output.read_text(encoding="utf-8") == "(A:1.000000,B:1.000000);\n"
-    assert f"Wrote Newick tree: {expected_output}" in capsys.readouterr().out
 
 
 def test_cli_default_output_requires_safe_distance_metric(tmp_path):

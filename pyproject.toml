@@ -9,6 +9,7 @@ description = "Molecular Clock Simulation"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+  "pillow>=10.0",
   "plotly>=5.22",
   "streamlit>=1.36",
 ]
@@ -20,6 +21,7 @@ relaxed-clock-sim = "relaxedclock.cli:main"
 relaxed-clock-explorer = "relaxedclock.explorer:main"
 distance-matrix = "distancematrix.cli:main"
 upgma = "phylogeny.cli:main"
+tree-comparison = "treecomparison.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
