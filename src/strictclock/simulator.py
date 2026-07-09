@@ -34,6 +34,14 @@ class SimulationConfig:
         :param data: Configuration dictionary loaded from a JSON file.
         :return: Validated configuration object ready for simulation.
         """
+        # Reject missing or mismatched files before interpreting simulator-specific fields.
+        intended_clock_model = data.get("clock_model")
+        if intended_clock_model != "strict":
+            raise ValueError(
+                "clock_model must be 'strict' for the strict clock simulator "
+                f"(received {intended_clock_model!r})"
+            )
+
         # Pull nested sections up front so future config keys can be added cleanly.
         tree = data.get("tree", {})
         clock = data.get("clock", {})

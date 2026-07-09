@@ -264,6 +264,14 @@ class RelaxedClockConfig:
         :param data: Configuration dictionary loaded from a JSON file.
         :return: Validated relaxed clock configuration object.
         """
+        # Reject missing or mismatched files before interpreting simulator-specific sections.
+        intended_clock_model = data.get("clock_model")
+        if intended_clock_model != "relaxed":
+            raise ValueError(
+                "clock_model must be 'relaxed' for the relaxed clock simulator "
+                f"(received {intended_clock_model!r})"
+            )
+
         # Validate each required section separately so error messages name the section.
         required_sections = ("simulation", "sequence", "tree", "clock", "mutation", "outputs")
         for section in required_sections:

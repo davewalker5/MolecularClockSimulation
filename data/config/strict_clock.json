@@ -1,4 +1,5 @@
 {
+  "clock_model": "strict",
   "sequence_length": 1000,
   "number_of_taxa": 8,
   "random_seed": 12345,

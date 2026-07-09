@@ -28,6 +28,7 @@ def make_config(**overrides):
     :return: Validated relaxed clock configuration.
     """
     data = {
+        "clock_model": "relaxed",
         "simulation": {
             "name": "test-relaxed-clock",
             "random_seed": 12345,
@@ -364,6 +365,7 @@ def test_module_style_cli_accepts_config_option(tmp_path):
     config_path.write_text(
         json.dumps(
             {
+                "clock_model": "relaxed",
                 "simulation": {"name": "cli-test", "random_seed": 7},
                 "sequence": {
                     "length": 12,
@@ -425,6 +427,59 @@ def test_relaxed_config_validation(bad_config, error):
     """
     with pytest.raises(ValueError, match=error):
         make_config(**bad_config)
+
+
+@pytest.mark.parametrize("clock_model", [None, "strict"])
+def test_relaxed_config_rejects_wrong_intended_clock_model(clock_model):
+    """Confirm relaxed configs must explicitly identify the relaxed simulator.
+
+    :param clock_model: Missing or mismatched top-level simulator identifier.
+    :return: None.
+    """
+    data = {
+        "simulation": {"name": "test", "random_seed": 1},
+        "sequence": {"length": 4, "alphabet": ["A", "C"], "root_sequence": None},
+        "tree": {
+            "max_depth": 1,
+            "branching_mode": "binary",
+            "branch_duration": 1.0,
+            "duration_jitter": 0.0,
+        },
+        "clock": {
+            "model": "autocorrelated_relaxed",
+            "root_rate": 0.1,
+            "rate_distribution": "lognormal",
+            "rate_sigma": 0.1,
+            "minimum_rate": 0.01,
+            "maximum_rate": 0.5,
+        },
+        "mutation": {"model": "simple_substitution", "allow_back_mutation": True},
+        "outputs": {
+            "write_fasta": True,
+            "write_newick": True,
+            "write_metadata": True,
+            "newick_branch_lengths": "genetic_change",
+        },
+    }
+    if clock_model is not None:
+        # Omit the key for the None case to test that it is required.
+        data["clock_model"] = clock_model
+
+    with pytest.raises(ValueError, match="clock_model must be 'relaxed'"):
+        RelaxedClockConfig.from_dict(data)
+
+
+def test_relaxed_cli_exits_for_strict_clock_config(tmp_path):
+    """Confirm the relaxed CLI exits clearly when given a strict clock file.
+
+    :param tmp_path: Temporary directory supplied by pytest.
+    :return: None.
+    """
+    config_path = tmp_path / "strict.json"
+    config_path.write_text('{"clock_model": "strict"}', encoding="utf-8")
+
+    with pytest.raises(SystemExit, match="clock_model must be 'relaxed'"):
+        main(["--config", str(config_path), "--output-dir", str(tmp_path)])
 
 
 def distance_from_root(node, root, attribute):
