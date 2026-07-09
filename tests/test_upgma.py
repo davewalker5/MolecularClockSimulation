@@ -10,6 +10,11 @@ from phylogeny.upgma import (
     to_newick,
     upgma,
 )
+from molecular_clock_simulation.reconstruction import (
+    reconstructed_tree_newick,
+    reconstructed_tree_to_dot,
+    reconstruct_upgma_tree,
+)
 
 
 FOUR_TAXON_LABELS = ["A", "B", "C", "D"]
@@ -30,6 +35,43 @@ def test_two_taxon_tree_has_half_distance_branch_lengths():
 
     assert root.height == 1.0
     assert to_newick(root) == "(A:1.000000,B:1.000000);"
+
+
+def test_reconstruct_upgma_tree_accepts_calculator_payload():
+    """Confirm Streamlit reconstruction helpers use calculator matrix payloads.
+
+    :return: None.
+    """
+    root = reconstruct_upgma_tree({
+        "labels": ["A", "B"],
+        "matrix": [[0, 2], [2, 0]],
+        "distance_metric": "hamming",
+    })
+
+    assert reconstructed_tree_newick(root) == "(A:1.000000,B:1.000000);"
+
+
+def test_reconstructed_tree_to_dot_uses_explorer_style():
+    """Confirm reconstructed trees can be rendered by Streamlit's Graphviz view.
+
+    :return: None.
+    """
+    root = upgma(["A", "B"], [[0, 2], [2, 0]])
+    colors = {
+        "page_bg": "#000000",
+        "surface_elevated": "#111111",
+        "border_strong": "#222222",
+        "text": "#eeeeee",
+        "text_subtle": "#999999",
+        "text_muted_strong": "#cccccc",
+    }
+
+    dot = reconstructed_tree_to_dot(root, graph_name="test_tree", colors=colors)
+
+    assert dot.startswith("digraph test_tree")
+    assert 'rankdir=LR' in dot
+    assert '"A+B" -> "A" [label="1"]' in dot
+    assert '"A+B" [label="cluster\\nheight 1"]' in dot
 
 
 def test_four_taxon_tree_has_expected_clustering_and_branch_lengths():

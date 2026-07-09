@@ -12,7 +12,16 @@ from dataclasses import dataclass
 from pathlib import PurePath
 from typing import Any
 
-from molecular_clock_simulation.distance_analysis import render_distance_analysis_tab
+from molecular_clock_simulation.distance_analysis import (
+    distance_matrix_csv_text,
+    render_distance_analysis_controls,
+    render_distance_analysis_tab,
+)
+from molecular_clock_simulation.reconstruction import (
+    reconstructed_tree_newick,
+    reconstructed_tree_to_dot,
+    reconstruct_upgma_tree,
+)
 from relaxedclock.simulator import (
     RelaxedClockConfig,
     RelaxedClockResult,
@@ -25,9 +34,11 @@ from strictclock.explorer import DARK_THEME, dark_theme_css
 
 DOWNLOAD_OPTIONS = (
     "FASTA",
-    "Newick",
+    "Newick (True Tree)",
     "Metadata JSON",
     "Tree PNG",
+    "Distance Matrix (JSON)",
+    "Distance Matrix (CSV)",
 )
 
 BRANCH_LENGTH_LABELS = {
@@ -214,17 +225,17 @@ def tree_to_svg(root: RelaxedTreeNode, branch_lengths: str = "genetic_change") -
     colors = DARK_THEME
     layout = build_tree_layout(root, branch_lengths)
     lines = [
-        f'<svg viewBox="0 0 {layout.width} {layout.height}" '
+        f'<svg class="relaxed-clock-tree" viewBox="0 0 {layout.width} {layout.height}" '
         'xmlns="http://www.w3.org/2000/svg" role="img" '
         f'aria-label="Relaxed molecular clock tree scaled by {html.escape(branch_lengths)}">',
         f'<rect width="100%" height="100%" fill="{colors["page_bg"]}" />',
         '<style>'
-        '.branch{fill:none;stroke:#94a3b8;stroke-width:2.2;stroke-linecap:round;}'
-        '.node{fill:#e5e7eb;stroke:#0b1220;stroke-width:1.5;}'
-        '.leaf{fill:#0b1220;stroke:#e5e7eb;stroke-width:1.8;}'
-        '.leaf-label{fill:#e5e7eb;font:14px Helvetica,Arial,sans-serif;}'
-        '.node-label{fill:#94a3b8;font:10px Helvetica,Arial,sans-serif;}'
-        '.branch-label{fill:#cbd5e1;font:10px Helvetica,Arial,sans-serif;}'
+        '.relaxed-clock-tree .branch{fill:none;stroke:#94a3b8;stroke-width:2.2;stroke-linecap:round;}'
+        '.relaxed-clock-tree .node{fill:#e5e7eb;stroke:#0b1220;stroke-width:1.5;}'
+        '.relaxed-clock-tree .leaf{fill:#0b1220;stroke:#e5e7eb;stroke-width:1.8;}'
+        '.relaxed-clock-tree .leaf-label{fill:#e5e7eb;font:14px Helvetica,Arial,sans-serif;}'
+        '.relaxed-clock-tree .node-label{fill:#94a3b8;font:10px Helvetica,Arial,sans-serif;}'
+        '.relaxed-clock-tree .branch-label{fill:#cbd5e1;font:10px Helvetica,Arial,sans-serif;}'
         '</style>',
     ]
 
@@ -556,6 +567,7 @@ def download_payload(
     metadata: str,
     tree_dot: str | RelaxedTreeNode,
     branch_lengths: str = "genetic_change",
+    distance_matrix: dict[str, Any] | None = None,
 ) -> tuple[str | bytes, str, str]:
     """Return data, extension, and MIME type for one download option.
 
@@ -565,17 +577,26 @@ def download_payload(
     :param metadata: Pre-rendered metadata JSON for the result.
     :param tree_dot: DOT source or relaxed tree root for the generated tree.
     :param branch_lengths: Branch value used to scale tree image downloads.
+    :param distance_matrix: Calculated distance matrix payload, when available.
     :return: Tuple of download data, filename extension, and MIME type.
     """
     # Centralize option handling so the UI and tests share one source of truth.
     if selection == "FASTA":
         return fasta, "fasta", "text/plain"
-    if selection == "Newick":
+    if selection == "Newick (True Tree)":
         return result.newick + "\n", "newick", "text/plain"
     if selection == "Metadata JSON":
         return metadata, "json", "application/json"
     if selection == "Tree PNG":
         return tree_png_bytes(tree_dot, branch_lengths), "png", "image/png"
+    if selection == "Distance Matrix (JSON)":
+        if distance_matrix is None:
+            raise ValueError("You must calculate a distance matrix before downloading it.")
+        return json.dumps(distance_matrix, indent=2) + "\n", "json", "application/json"
+    if selection == "Distance Matrix (CSV)":
+        if distance_matrix is None:
+            raise ValueError("You must calculate a distance matrix before downloading it.")
+        return distance_matrix_csv_text(distance_matrix), "csv", "text/csv"
     raise ValueError(f"Unknown download selection: {selection}")
 
 
@@ -615,7 +636,48 @@ def render_app() -> None:
     st.markdown(dark_theme_css(), unsafe_allow_html=True)
     st.title("Relaxed Molecular Clock Explorer")
 
+    sidebar_tab_key = "relaxed_sidebar_tab"
+    main_tab_key = "relaxed_main_tab"
+    reconstruction_warning_key = "relaxed_reconstruction_warning"
+    reconstruction_error_key = "relaxed_reconstruction_error"
+    reconstruction_dot_key = "relaxed_reconstruction_dot"
+    reconstruction_newick_key = "relaxed_reconstruction_newick"
+    main_tab_labels = [
+        "FASTA Sequences",
+        "Newick Output",
+        "Distance Analysis",
+        "Reconstruction",
+        "Downloads",
+    ]
+
+    def sync_main_tab_from_sidebar() -> None:
+        """Select the matching main output tab when the sidebar tab changes."""
+        sidebar_tab = st.session_state.get(sidebar_tab_key)
+        if sidebar_tab == "Simulation":
+            st.session_state[main_tab_key] = "FASTA Sequences"
+        elif sidebar_tab == "Distance":
+            st.session_state[main_tab_key] = "Distance Analysis"
+        elif sidebar_tab == "Reconstruction":
+            st.session_state[main_tab_key] = "Reconstruction"
+
+    def sync_sidebar_tab_from_main() -> None:
+        """Select the matching sidebar tab when the main output tab changes."""
+        main_tab = st.session_state.get(main_tab_key)
+        if main_tab in {"FASTA Sequences", "Newick Output"}:
+            st.session_state[sidebar_tab_key] = "Simulation"
+        elif main_tab == "Distance Analysis":
+            st.session_state[sidebar_tab_key] = "Distance"
+        elif main_tab == "Reconstruction":
+            st.session_state[sidebar_tab_key] = "Reconstruction"
+
     with st.sidebar:
+        simulation_sidebar_tab, distance_sidebar_tab, reconstruction_sidebar_tab = st.tabs(
+            ["Simulation", "Distance", "Reconstruction"],
+            key=sidebar_tab_key,
+            on_change=sync_main_tab_from_sidebar,
+        )
+
+    with simulation_sidebar_tab:
         st.header("Simulation")
         st.subheader("Tree")
         max_depth = st.slider(
@@ -739,6 +801,48 @@ def render_app() -> None:
     tree_dot = tree_to_dot(result.root, branch_lengths)
     tree_svg = tree_to_svg(result.root, branch_lengths)
 
+    with distance_sidebar_tab:
+        st.header("Distance")
+        render_distance_analysis_controls(
+            result.terminal_sequences,
+            state_key_prefix="relaxed",
+        )
+
+    with reconstruction_sidebar_tab:
+        st.header("Reconstruction")
+        st.selectbox(
+            "Algorithm",
+            options=("UPGMA",),
+            key="relaxed_reconstruction_algorithm",
+        )
+        if st.button("Reconstruct Tree", key="relaxed_reconstruct_tree", width="stretch"):
+            st.session_state[main_tab_key] = "Reconstruction"
+            matrix_payload = st.session_state.get("relaxed_distance_matrix")
+            if matrix_payload is None:
+                st.session_state[reconstruction_warning_key] = True
+                st.session_state.pop(reconstruction_error_key, None)
+                st.session_state.pop(reconstruction_dot_key, None)
+                st.session_state.pop(reconstruction_newick_key, None)
+            else:
+                try:
+                    reconstructed_tree = reconstruct_upgma_tree(matrix_payload)
+                except ValueError as error:
+                    st.session_state[reconstruction_warning_key] = False
+                    st.session_state[reconstruction_error_key] = str(error)
+                    st.session_state.pop(reconstruction_dot_key, None)
+                    st.session_state.pop(reconstruction_newick_key, None)
+                else:
+                    st.session_state[reconstruction_warning_key] = False
+                    st.session_state.pop(reconstruction_error_key, None)
+                    st.session_state[reconstruction_dot_key] = reconstructed_tree_to_dot(
+                        reconstructed_tree,
+                        graph_name="relaxed_reconstructed_tree",
+                        colors=DARK_THEME,
+                    )
+                    st.session_state[reconstruction_newick_key] = reconstructed_tree_newick(
+                        reconstructed_tree
+                    )
+
     # The tree is the primary visual output for this explorer release.
     st.subheader("Phylogenetic Tree")
     st.markdown(tree_svg, unsafe_allow_html=True)
@@ -763,8 +867,10 @@ def render_app() -> None:
         f"Newick branch lengths: {html.escape(summary['newick_branch_lengths'])}"
     )
 
-    sequence_tab, newick_tab, distance_tab, download_tab = st.tabs(
-        ["FASTA Sequences", "Newick Output", "Distance Analysis", "Downloads"]
+    sequence_tab, newick_tab, distance_tab, reconstruction_tab, download_tab = st.tabs(
+        main_tab_labels,
+        key=main_tab_key,
+        on_change=sync_sidebar_tab_from_main,
     )
     with sequence_tab:
         st.code(fasta, language="text")
@@ -775,6 +881,18 @@ def render_app() -> None:
             result.terminal_sequences,
             state_key_prefix="relaxed",
         )
+    with reconstruction_tab:
+        if (
+            st.session_state.get(reconstruction_warning_key)
+            and st.session_state.get("relaxed_distance_matrix") is None
+        ):
+            st.warning("You must calculate a distance matrix before reconstructing a tree")
+        elif st.session_state.get(reconstruction_error_key):
+            st.warning(st.session_state[reconstruction_error_key])
+        elif st.session_state.get(reconstruction_dot_key):
+            st.graphviz_chart(st.session_state[reconstruction_dot_key], width="stretch")
+            with st.expander("Reconstructed Newick"):
+                st.code(st.session_state[reconstruction_newick_key], language="text")
     with download_tab:
         # A single selector and button avoids four competing download controls.
         download_selection = st.selectbox(
@@ -809,7 +927,14 @@ def render_app() -> None:
                     metadata=metadata,
                     tree_dot=result.root,
                     branch_lengths=branch_lengths,
+                    distance_matrix=st.session_state.get("relaxed_distance_matrix"),
                 )
+            except ValueError as error:
+                if download_selection in {"Distance Matrix (JSON)", "Distance Matrix (CSV)"}:
+                    if st.button("Download", width="stretch"):
+                        st.warning(str(error))
+                else:
+                    st.warning(str(error))
             except (RuntimeError, subprocess.CalledProcessError) as error:
                 st.warning(f"{download_selection} export is unavailable: {error}")
             else:

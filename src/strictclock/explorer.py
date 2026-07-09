@@ -11,7 +11,16 @@ from dataclasses import dataclass
 from pathlib import PurePath
 from typing import Any
 
-from molecular_clock_simulation.distance_analysis import render_distance_analysis_tab
+from molecular_clock_simulation.distance_analysis import (
+    distance_matrix_csv_text,
+    render_distance_analysis_controls,
+    render_distance_analysis_tab,
+)
+from molecular_clock_simulation.reconstruction import (
+    reconstructed_tree_newick,
+    reconstructed_tree_to_dot,
+    reconstruct_upgma_tree,
+)
 from strictclock.simulator import (
     SimulationConfig,
     SimulationResult,
@@ -22,9 +31,11 @@ from strictclock.simulator import (
 
 DOWNLOAD_OPTIONS = (
     "FASTA",
-    "Newick",
+    "Newick (True Tree)",
     "Metadata JSON",
     "Tree PNG",
+    "Distance Matrix (JSON)",
+    "Distance Matrix (CSV)",
 )
 
 DARK_THEME = {
@@ -250,6 +261,7 @@ def download_payload(
     fasta: str,
     metadata: str,
     tree_dot: str,
+    distance_matrix: dict[str, Any] | None = None,
 ) -> tuple[str | bytes, str, str]:
     """Return data, extension, and MIME type for one download option.
 
@@ -258,17 +270,26 @@ def download_payload(
     :param fasta: Pre-rendered FASTA text for the result.
     :param metadata: Pre-rendered metadata JSON for the result.
     :param tree_dot: DOT source for the generated tree.
+    :param distance_matrix: Calculated distance matrix payload, when available.
     :return: Tuple of download data, filename extension, and MIME type.
     """
     # Centralize option handling so the UI and tests share one source of truth.
     if selection == "FASTA":
         return fasta, "fasta", "text/plain"
-    if selection == "Newick":
+    if selection == "Newick (True Tree)":
         return result.newick + "\n", "newick", "text/plain"
     if selection == "Metadata JSON":
         return metadata, "json", "application/json"
     if selection == "Tree PNG":
         return tree_png_bytes(tree_dot), "png", "image/png"
+    if selection == "Distance Matrix (JSON)":
+        if distance_matrix is None:
+            raise ValueError("You must calculate a distance matrix before downloading it.")
+        return json.dumps(distance_matrix, indent=2) + "\n", "json", "application/json"
+    if selection == "Distance Matrix (CSV)":
+        if distance_matrix is None:
+            raise ValueError("You must calculate a distance matrix before downloading it.")
+        return distance_matrix_csv_text(distance_matrix), "csv", "text/csv"
     raise ValueError(f"Unknown download selection: {selection}")
 
 
@@ -413,7 +434,48 @@ def render_app() -> None:
     st.markdown(dark_theme_css(), unsafe_allow_html=True)
     st.title("Strict Molecular Clock Explorer")
 
+    sidebar_tab_key = "strict_sidebar_tab"
+    main_tab_key = "strict_main_tab"
+    reconstruction_warning_key = "strict_reconstruction_warning"
+    reconstruction_error_key = "strict_reconstruction_error"
+    reconstruction_dot_key = "strict_reconstruction_dot"
+    reconstruction_newick_key = "strict_reconstruction_newick"
+    main_tab_labels = [
+        "FASTA Sequences",
+        "Newick Output",
+        "Distance Analysis",
+        "Reconstruction",
+        "Downloads",
+    ]
+
+    def sync_main_tab_from_sidebar() -> None:
+        """Select the matching main output tab when the sidebar tab changes."""
+        sidebar_tab = st.session_state.get(sidebar_tab_key)
+        if sidebar_tab == "Simulation":
+            st.session_state[main_tab_key] = "FASTA Sequences"
+        elif sidebar_tab == "Distance":
+            st.session_state[main_tab_key] = "Distance Analysis"
+        elif sidebar_tab == "Reconstruction":
+            st.session_state[main_tab_key] = "Reconstruction"
+
+    def sync_sidebar_tab_from_main() -> None:
+        """Select the matching sidebar tab when the main output tab changes."""
+        main_tab = st.session_state.get(main_tab_key)
+        if main_tab in {"FASTA Sequences", "Newick Output"}:
+            st.session_state[sidebar_tab_key] = "Simulation"
+        elif main_tab == "Distance Analysis":
+            st.session_state[sidebar_tab_key] = "Distance"
+        elif main_tab == "Reconstruction":
+            st.session_state[sidebar_tab_key] = "Reconstruction"
+
     with st.sidebar:
+        simulation_sidebar_tab, distance_sidebar_tab, reconstruction_sidebar_tab = st.tabs(
+            ["Simulation", "Distance", "Reconstruction"],
+            key=sidebar_tab_key,
+            on_change=sync_main_tab_from_sidebar,
+        )
+
+    with simulation_sidebar_tab:
         st.header("Simulation")
         number_of_taxa = st.slider(
             "Number of taxa",
@@ -477,6 +539,48 @@ def render_app() -> None:
     metadata = metadata_json(result)
     tree_dot = tree_to_dot(result.root)
 
+    with distance_sidebar_tab:
+        st.header("Distance")
+        render_distance_analysis_controls(
+            result.terminal_sequences,
+            state_key_prefix="strict",
+        )
+
+    with reconstruction_sidebar_tab:
+        st.header("Reconstruction")
+        st.selectbox(
+            "Algorithm",
+            options=("UPGMA",),
+            key="strict_reconstruction_algorithm",
+        )
+        if st.button("Reconstruct Tree", key="strict_reconstruct_tree", width="stretch"):
+            st.session_state[main_tab_key] = "Reconstruction"
+            matrix_payload = st.session_state.get("strict_distance_matrix")
+            if matrix_payload is None:
+                st.session_state[reconstruction_warning_key] = True
+                st.session_state.pop(reconstruction_error_key, None)
+                st.session_state.pop(reconstruction_dot_key, None)
+                st.session_state.pop(reconstruction_newick_key, None)
+            else:
+                try:
+                    reconstructed_tree = reconstruct_upgma_tree(matrix_payload)
+                except ValueError as error:
+                    st.session_state[reconstruction_warning_key] = False
+                    st.session_state[reconstruction_error_key] = str(error)
+                    st.session_state.pop(reconstruction_dot_key, None)
+                    st.session_state.pop(reconstruction_newick_key, None)
+                else:
+                    st.session_state[reconstruction_warning_key] = False
+                    st.session_state.pop(reconstruction_error_key, None)
+                    st.session_state[reconstruction_dot_key] = reconstructed_tree_to_dot(
+                        reconstructed_tree,
+                        graph_name="strict_reconstructed_tree",
+                        colors=DARK_THEME,
+                    )
+                    st.session_state[reconstruction_newick_key] = reconstructed_tree_newick(
+                        reconstructed_tree
+                    )
+
     # The tree is the primary visual output for this explorer release.
     st.subheader("Phylogenetic Tree")
     st.graphviz_chart(tree_dot, width="stretch")
@@ -493,8 +597,10 @@ def render_app() -> None:
         f"mutation rate: {summary['mutation_rate']}"
     )
 
-    sequence_tab, newick_tab, distance_tab, download_tab = st.tabs(
-        ["FASTA Sequences", "Newick Output", "Distance Analysis", "Downloads"]
+    sequence_tab, newick_tab, distance_tab, reconstruction_tab, download_tab = st.tabs(
+        main_tab_labels,
+        key=main_tab_key,
+        on_change=sync_sidebar_tab_from_main,
     )
     with sequence_tab:
         st.code(fasta, language="text")
@@ -505,6 +611,18 @@ def render_app() -> None:
             result.terminal_sequences,
             state_key_prefix="strict",
         )
+    with reconstruction_tab:
+        if (
+            st.session_state.get(reconstruction_warning_key)
+            and st.session_state.get("strict_distance_matrix") is None
+        ):
+            st.warning("Calculate a distance matrix before reconstructing a tree.")
+        elif st.session_state.get(reconstruction_error_key):
+            st.warning(st.session_state[reconstruction_error_key])
+        elif st.session_state.get(reconstruction_dot_key):
+            st.graphviz_chart(st.session_state[reconstruction_dot_key], width="stretch")
+            with st.expander("Reconstructed Newick"):
+                st.code(st.session_state[reconstruction_newick_key], language="text")
     with download_tab:
         # A single selector and button avoids four competing download controls.
         download_selection = st.selectbox(
@@ -538,7 +656,14 @@ def render_app() -> None:
                     fasta=fasta,
                     metadata=metadata,
                     tree_dot=tree_dot,
+                    distance_matrix=st.session_state.get("strict_distance_matrix"),
                 )
+            except ValueError as error:
+                if download_selection in {"Distance Matrix (JSON)", "Distance Matrix (CSV)"}:
+                    if st.button("Download", width="stretch"):
+                        st.warning(str(error))
+                else:
+                    st.warning(str(error))
             except (RuntimeError, subprocess.CalledProcessError) as error:
                 st.warning(f"{download_selection} export is unavailable: {error}")
             else:

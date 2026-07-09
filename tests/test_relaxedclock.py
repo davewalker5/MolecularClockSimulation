@@ -212,6 +212,9 @@ def test_relaxed_explorer_helpers_render_current_simulation_result():
     assert "Newick time" in time_dot
     assert time_dot != dot
     assert svg.startswith("<svg")
+    assert 'class="relaxed-clock-tree"' in svg
+    assert ".relaxed-clock-tree .node" in svg
+    assert "<style>.node{" not in svg
     assert "genetic" in svg
     assert "time" in time_svg
     assert time_svg != svg
@@ -299,9 +302,11 @@ def test_relaxed_download_stem_validation_builds_expected_filenames():
     "selection,extension,mime",
     [
         ("FASTA", "fasta", "text/plain"),
-        ("Newick", "newick", "text/plain"),
+        ("Newick (True Tree)", "newick", "text/plain"),
         ("Metadata JSON", "json", "application/json"),
         ("Tree PNG", "png", "image/png"),
+        ("Distance Matrix (JSON)", "json", "application/json"),
+        ("Distance Matrix (CSV)", "csv", "text/csv"),
     ],
 )
 def test_relaxed_download_payload_matches_selected_format(selection, extension, mime):
@@ -328,6 +333,11 @@ def test_relaxed_download_payload_matches_selected_format(selection, extension, 
         fasta=fasta,
         metadata=metadata,
         tree_dot=tree_dot,
+        distance_matrix={
+            "labels": ["Species_A", "Species_B"],
+            "matrix": [[0.0, 1.0], [1.0, 0.0]],
+            "distance_metric": "hamming",
+        },
     )
 
     assert actual_extension == extension
@@ -337,6 +347,100 @@ def test_relaxed_download_payload_matches_selected_format(selection, extension, 
     else:
         assert isinstance(data, str)
         assert data
+
+
+@pytest.mark.parametrize("selection", ["Distance Matrix (JSON)", "Distance Matrix (CSV)"])
+def test_relaxed_distance_matrix_download_requires_calculated_matrix(selection):
+    """Confirm distance matrix export requires prior calculation.
+
+    :return: None.
+    """
+    result = run_simulation(
+        make_config(
+            sequence={
+                "length": 20,
+                "alphabet": ["A", "C", "G", "T"],
+                "root_sequence": None,
+            }
+        )
+    )
+
+    with pytest.raises(ValueError, match="calculate a distance matrix"):
+        download_payload(
+            selection,
+            result,
+            fasta=fasta_text(result),
+            metadata=metadata_json(result),
+            tree_dot=tree_to_dot(result.root),
+        )
+
+
+def test_relaxed_distance_matrix_download_serializes_json_payload():
+    """Confirm relaxed explorer exports calculated distance matrices as JSON.
+
+    :return: None.
+    """
+    result = run_simulation(
+        make_config(
+            sequence={
+                "length": 20,
+                "alphabet": ["A", "C", "G", "T"],
+                "root_sequence": None,
+            }
+        )
+    )
+    matrix = {
+        "labels": ["Species_A", "Species_B"],
+        "matrix": [[0.0, 1.0], [1.0, 0.0]],
+        "distance_metric": "hamming",
+    }
+
+    data, extension, mime = download_payload(
+        "Distance Matrix (JSON)",
+        result,
+        fasta=fasta_text(result),
+        metadata=metadata_json(result),
+        tree_dot=tree_to_dot(result.root),
+        distance_matrix=matrix,
+    )
+
+    assert extension == "json"
+    assert mime == "application/json"
+    assert json.loads(data) == matrix
+
+
+def test_relaxed_distance_matrix_csv_download_serializes_csv_payload():
+    """Confirm relaxed explorer exports calculated distance matrices as CSV.
+
+    :return: None.
+    """
+    result = run_simulation(
+        make_config(
+            sequence={
+                "length": 20,
+                "alphabet": ["A", "C", "G", "T"],
+                "root_sequence": None,
+            }
+        )
+    )
+    matrix = {
+        "labels": ["Species_A", "Species_B"],
+        "matrix": [[0.0, 1.0], [1.0, 0.0]],
+        "distance_metric": "hamming",
+    }
+
+    data, extension, mime = download_payload(
+        "Distance Matrix (CSV)",
+        result,
+        fasta=fasta_text(result),
+        metadata=metadata_json(result),
+        tree_dot=tree_to_dot(result.root),
+        distance_matrix=matrix,
+    )
+
+    assert extension == "csv"
+    assert mime == "text/csv"
+    assert data == ",Species_A,Species_B\r\nSpecies_A,0.0,1.0\r\nSpecies_B,1.0,0.0\r\n"
 
 
 @pytest.mark.parametrize(

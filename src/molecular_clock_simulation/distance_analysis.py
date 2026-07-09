@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import csv
+import io
 import math
 from typing import Any
 
@@ -80,33 +82,21 @@ def render_distance_analysis_tab(
     labels = list(sequences)
     model_state_key = f"{state_key_prefix}_distance_model"
     matrix_state_key = f"{state_key_prefix}_distance_matrix"
-
-    selected_label = st.selectbox(
-        "Distance model",
-        options=list(DISTANCE_MODEL_OPTIONS),
-        key=f"{state_key_prefix}_distance_model_selection",
-    )
-    selected_model = DISTANCE_MODEL_OPTIONS[selected_label]
-
-    if st.button("Calculate Distances", key=f"{state_key_prefix}_calculate_distances"):
-        # Store the model together with the matrix so model changes do not recalculate implicitly.
-        st.session_state[model_state_key] = selected_model
-        st.session_state[matrix_state_key] = calculate_distance_matrix(
-            sequences,
-            distance_type=selected_model,
-        )
+    selected_model = selected_distance_model(state_key_prefix)
 
     active_model = st.session_state.get(model_state_key)
     matrix_payload = st.session_state.get(matrix_state_key)
     if matrix_payload is None or active_model is None:
-        st.info("Choose a distance model, then calculate distances to analyse this simulation.")
-        st.markdown(model_explanation(selected_model))
+        st.info(
+            "Choose a distance model in the sidebar, then calculate distances "
+            "to analyse this simulation."
+        )
         return
 
     if active_model != selected_model:
         st.caption(
             f"Showing the last calculated {MODEL_LABELS[active_model]} matrix. "
-            "Press Calculate Distances to update the analysis."
+            "Press Calculate Distances in the sidebar to update the analysis."
         )
 
     st.subheader("Pairwise Sequence Comparison")
@@ -147,8 +137,71 @@ def render_distance_analysis_tab(
             hide_index=True,
         )
 
+
+def render_distance_analysis_controls(
+    sequences: dict[str, str],
+    *,
+    state_key_prefix: str,
+) -> None:
+    """Render sidebar controls for distance-analysis calculations.
+
+    :param sequences: Mapping of taxon labels to aligned terminal sequences.
+    :param state_key_prefix: Prefix used to isolate Streamlit session-state keys.
+    :return: None.
+    """
+    import streamlit as st
+
+    model_state_key = f"{state_key_prefix}_distance_model"
+    matrix_state_key = f"{state_key_prefix}_distance_matrix"
+    selected_label = st.selectbox(
+        "Distance model",
+        options=list(DISTANCE_MODEL_OPTIONS),
+        key=f"{state_key_prefix}_distance_model_selection",
+    )
+    selected_model = DISTANCE_MODEL_OPTIONS[selected_label]
+
+    if st.button("Calculate Distances", key=f"{state_key_prefix}_calculate_distances"):
+        # Store the model together with the matrix so model changes do not recalculate implicitly.
+        st.session_state[model_state_key] = selected_model
+        st.session_state[matrix_state_key] = calculate_distance_matrix(
+            sequences,
+            distance_type=selected_model,
+        )
+
     st.subheader("Model Explanation")
-    st.markdown(model_explanation(active_model))
+    st.markdown(model_explanation(selected_model))
+
+
+def selected_distance_model(state_key_prefix: str) -> str:
+    """Return the currently selected distance model for a Streamlit session.
+
+    :param state_key_prefix: Prefix used to isolate Streamlit session-state keys.
+    :return: Selected distance model key.
+    """
+    import streamlit as st
+
+    selected_label = st.session_state.get(
+        f"{state_key_prefix}_distance_model_selection",
+        next(iter(DISTANCE_MODEL_OPTIONS)),
+    )
+    return DISTANCE_MODEL_OPTIONS[selected_label]
+
+
+def distance_matrix_csv_text(matrix_payload: dict[str, Any]) -> str:
+    """Serialize a distance matrix payload as CSV text.
+
+    :param matrix_payload: Matrix payload returned by calculate_distance_matrix.
+    :return: CSV text with a leading blank header cell for row labels.
+    """
+    output = io.StringIO()
+    writer = csv.writer(output)
+    labels = matrix_payload["labels"]
+
+    writer.writerow(["", *labels])
+    for label, row in zip(labels, matrix_payload["matrix"], strict=True):
+        writer.writerow([label, *row])
+
+    return output.getvalue()
 
 
 def pairwise_summary(

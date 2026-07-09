@@ -143,9 +143,11 @@ def test_download_stem_validation_builds_expected_filenames():
     "selection,extension,mime",
     [
         ("FASTA", "fasta", "text/plain"),
-        ("Newick", "newick", "text/plain"),
+        ("Newick (True Tree)", "newick", "text/plain"),
         ("Metadata JSON", "json", "application/json"),
         ("Tree PNG", "png", "image/png"),
+        ("Distance Matrix (JSON)", "json", "application/json"),
+        ("Distance Matrix (CSV)", "csv", "text/csv"),
     ],
 )
 def test_download_payload_matches_selected_format(selection, extension, mime):
@@ -160,6 +162,11 @@ def test_download_payload_matches_selected_format(selection, extension, mime):
         fasta=fasta,
         metadata=metadata,
         tree_dot=tree_dot,
+        distance_matrix={
+            "labels": ["Species_A", "Species_B"],
+            "matrix": [[0.0, 1.0], [1.0, 0.0]],
+            "distance_metric": "hamming",
+        },
     )
 
     assert actual_extension == extension
@@ -169,6 +176,64 @@ def test_download_payload_matches_selected_format(selection, extension, mime):
     else:
         assert isinstance(data, str)
         assert data
+
+
+@pytest.mark.parametrize("selection", ["Distance Matrix (JSON)", "Distance Matrix (CSV)"])
+def test_distance_matrix_download_requires_calculated_matrix(selection):
+    result = run_simulation(make_config(sequence_length=20, number_of_taxa=4))
+
+    with pytest.raises(ValueError, match="calculate a distance matrix"):
+        download_payload(
+            selection,
+            result,
+            fasta=fasta_text(result),
+            metadata=metadata_json(result),
+            tree_dot=tree_to_dot(result.root),
+        )
+
+
+def test_distance_matrix_download_serializes_json_payload():
+    result = run_simulation(make_config(sequence_length=20, number_of_taxa=4))
+    matrix = {
+        "labels": ["Species_A", "Species_B"],
+        "matrix": [[0.0, 1.0], [1.0, 0.0]],
+        "distance_metric": "hamming",
+    }
+
+    data, extension, mime = download_payload(
+        "Distance Matrix (JSON)",
+        result,
+        fasta=fasta_text(result),
+        metadata=metadata_json(result),
+        tree_dot=tree_to_dot(result.root),
+        distance_matrix=matrix,
+    )
+
+    assert extension == "json"
+    assert mime == "application/json"
+    assert json.loads(data) == matrix
+
+
+def test_distance_matrix_csv_download_serializes_csv_payload():
+    result = run_simulation(make_config(sequence_length=20, number_of_taxa=4))
+    matrix = {
+        "labels": ["Species_A", "Species_B"],
+        "matrix": [[0.0, 1.0], [1.0, 0.0]],
+        "distance_metric": "hamming",
+    }
+
+    data, extension, mime = download_payload(
+        "Distance Matrix (CSV)",
+        result,
+        fasta=fasta_text(result),
+        metadata=metadata_json(result),
+        tree_dot=tree_to_dot(result.root),
+        distance_matrix=matrix,
+    )
+
+    assert extension == "csv"
+    assert mime == "text/csv"
+    assert data == ",Species_A,Species_B\r\nSpecies_A,0.0,1.0\r\nSpecies_B,1.0,0.0\r\n"
 
 
 @pytest.mark.parametrize("value", ["", "   ", "folder/run", "folder\\run", "run.json", ".", ".."])
