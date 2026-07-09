@@ -104,6 +104,7 @@ def build_config(
     # Keep the Streamlit controls mapped through the public config validator.
     return RelaxedClockConfig.from_dict(
         {
+            "clock_model": "relaxed",
             "simulation": {
                 "name": "relaxed-clock-explorer",
                 "random_seed": random_seed,

@@ -20,20 +20,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Simulate sequence evolution under a relaxed molecular clock.",
     )
-    parser.add_argument(
-        "-c",
-        "--config",
-        required=True,
-        type=Path,
-        help="Path to a relaxed molecular clock JSON configuration file",
-    )
-    parser.add_argument(
-        "-o",
-        "--output-dir",
-        type=Path,
-        default=DEFAULT_OUTPUT_FOLDER,
-        help="Directory where relaxed clock output files will be written",
-    )
+    parser.add_argument("-c", "--config", required=True, type=Path,
+                        help="Path to a relaxed molecular clock JSON configuration file")
+    parser.add_argument("-o", "--output-dir", type=Path, default=DEFAULT_OUTPUT_FOLDER,
+                        help="Directory where relaxed clock output files will be written")
     return parser
 
 
@@ -46,12 +36,12 @@ def main(argv: list[str] | None = None) -> int:
     # Parse arguments before reading files so argparse handles usage errors.
     args = build_parser().parse_args(argv)
 
-    # The config controls reproducibility, topology, rate inheritance, and outputs.
-    config = load_config(args.config)
-    result = run_simulation(config)
-    written = write_outputs(result, args.config, args.output_dir)
+    try:
+        # The loader checks that the file explicitly targets the relaxed clock simulator.
+        config = load_config(args.config)
+        result = run_simulation(config)
+    except (OSError, ValueError) as error:
+        raise SystemExit(f"Error: {error}") from error
+    _ = write_outputs(result, args.config, args.output_dir)
 
-    # Print only files that were requested and written by the config.
-    for label, path in written.items():
-        print(f"Wrote {label}: {path}")
     return 0

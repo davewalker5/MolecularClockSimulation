@@ -594,7 +594,7 @@ def test_write_json_and_csv_create_expected_outputs(tmp_path):
 
 
 def test_write_outputs_creates_both_matrix_files(tmp_path):
-    """Confirm the output helper writes the brief's two expected filenames.
+    """Confirm the output helper includes the distance type in both filenames.
 
     :return: None.
     """
@@ -604,13 +604,13 @@ def test_write_outputs_creates_both_matrix_files(tmp_path):
     })
     written = write_outputs(matrix, tmp_path / "output")
 
-    assert written["json"].name == "distance_matrix.json"
-    assert written["csv"].name == "distance_matrix.csv"
+    assert written["json"].name == "distance_matrix_hamming.json"
+    assert written["csv"].name == "distance_matrix_hamming.csv"
     assert written["json"].exists()
     assert written["csv"].exists()
 
 
-def test_cli_writes_distance_matrix_files(tmp_path, capsys):
+def test_cli_writes_distance_matrix_files(tmp_path):
     """Confirm the command-line wrapper runs the full calculator workflow.
 
     :return: None.
@@ -624,14 +624,12 @@ def test_cli_writes_distance_matrix_files(tmp_path, capsys):
 
     assert main(["-i", str(fasta), "-o", str(output)]) == 0
 
-    captured = capsys.readouterr()
-    assert "Wrote JSON" in captured.out
-    assert json.loads((output / "distance_matrix.json").read_text(encoding="utf-8"))["matrix"] == [
+    assert json.loads((output / "distance_matrix_hamming.json").read_text(encoding="utf-8"))["matrix"] == [
         [0, 1, 2],
         [1, 0, 3],
         [2, 3, 0],
     ]
-    assert (output / "distance_matrix.csv").exists()
+    assert (output / "distance_matrix_hamming.csv").exists()
 
 
 def test_cli_writes_proportional_distance_matrix_files(tmp_path):
@@ -648,14 +646,14 @@ def test_cli_writes_proportional_distance_matrix_files(tmp_path):
 
     assert main(["-i", str(fasta), "-o", str(output), "-dt", "proportional"]) == 0
 
-    payload = json.loads((output / "distance_matrix.json").read_text(encoding="utf-8"))
+    payload = json.loads((output / "distance_matrix_proportional.json").read_text(encoding="utf-8"))
     assert payload["distance_metric"] == "proportional"
     assert payload["matrix"] == [
         [0.0, 0.125, 0.25],
         [0.125, 0.0, 0.375],
         [0.25, 0.375, 0.0],
     ]
-    with (output / "distance_matrix.csv").open(encoding="utf-8", newline="") as handle:
+    with (output / "distance_matrix_proportional.csv").open(encoding="utf-8", newline="") as handle:
         assert list(csv.reader(handle)) == [
             ["", "Species_A", "Species_B", "Species_C"],
             ["Species_A", "0.0", "0.125", "0.25"],
@@ -678,13 +676,13 @@ def test_cli_writes_jc69_distance_matrix_files(tmp_path):
 
     assert main(["-i", str(fasta), "-o", str(output), "-dt", "jc69"]) == 0
 
-    payload = json.loads((output / "distance_matrix.json").read_text(encoding="utf-8"))
+    payload = json.loads((output / "distance_matrix_jc69.json").read_text(encoding="utf-8"))
     assert payload["labels"] == ["Species_A", "Species_B", "Species_C"]
     assert payload["distance_metric"] == "jc69"
     assert payload["matrix"][0][0] == 0.0
     assert payload["matrix"][0][1] == pytest.approx(jc69_distance("ACGTACGT", "ACGTTCGT"))
     assert payload["matrix"][1][0] == pytest.approx(jc69_distance("ACGTTCGT", "ACGTACGT"))
-    with (output / "distance_matrix.csv").open(encoding="utf-8", newline="") as handle:
+    with (output / "distance_matrix_jc69.csv").open(encoding="utf-8", newline="") as handle:
         rows = list(csv.reader(handle))
 
     assert rows[0] == ["", "Species_A", "Species_B", "Species_C"]
@@ -707,13 +705,13 @@ def test_cli_writes_k80_distance_matrix_files(tmp_path):
 
     assert main(["-i", str(fasta), "-o", str(output), "-dt", "k80"]) == 0
 
-    payload = json.loads((output / "distance_matrix.json").read_text(encoding="utf-8"))
+    payload = json.loads((output / "distance_matrix_k80.json").read_text(encoding="utf-8"))
     assert payload["labels"] == ["Species_A", "Species_B", "Species_C"]
     assert payload["distance_metric"] == "k80"
     assert payload["matrix"][0][0] == 0.0
     assert payload["matrix"][0][1] == pytest.approx(kimura_distance("AAAA", "GAAA"))
     assert payload["matrix"][1][0] == pytest.approx(kimura_distance("GAAA", "AAAA"))
-    with (output / "distance_matrix.csv").open(encoding="utf-8", newline="") as handle:
+    with (output / "distance_matrix_k80.csv").open(encoding="utf-8", newline="") as handle:
         rows = list(csv.reader(handle))
 
     assert rows[0] == ["", "Species_A", "Species_B", "Species_C"]
@@ -736,13 +734,13 @@ def test_cli_writes_f81_distance_matrix_files(tmp_path):
 
     assert main(["-i", str(fasta), "-o", str(output), "-dt", "f81"]) == 0
 
-    payload = json.loads((output / "distance_matrix.json").read_text(encoding="utf-8"))
+    payload = json.loads((output / "distance_matrix_f81.json").read_text(encoding="utf-8"))
     assert payload["labels"] == ["Species_A", "Species_B", "Species_C"]
     assert payload["distance_metric"] == "f81"
     assert payload["matrix"][0][0] == 0.0
     assert payload["matrix"][0][1] == pytest.approx(f81_distance("AAAACCCC", "AAAAGGCC"))
     assert payload["matrix"][1][0] == pytest.approx(f81_distance("AAAAGGCC", "AAAACCCC"))
-    with (output / "distance_matrix.csv").open(encoding="utf-8", newline="") as handle:
+    with (output / "distance_matrix_f81.csv").open(encoding="utf-8", newline="") as handle:
         rows = list(csv.reader(handle))
 
     assert rows[0] == ["", "Species_A", "Species_B", "Species_C"]
@@ -765,13 +763,13 @@ def test_cli_writes_hky85_distance_matrix_files(tmp_path):
 
     assert main(["-i", str(fasta), "-o", str(output), "-dt", "hky85"]) == 0
 
-    payload = json.loads((output / "distance_matrix.json").read_text(encoding="utf-8"))
+    payload = json.loads((output / "distance_matrix_hky85.json").read_text(encoding="utf-8"))
     assert payload["labels"] == ["Species_A", "Species_B", "Species_C"]
     assert payload["distance_metric"] == "hky85"
     assert payload["matrix"][0][0] == 0.0
     assert payload["matrix"][0][1] == pytest.approx(hky85_distance("AAAACCCC", "GGAACCCC"))
     assert payload["matrix"][1][0] == pytest.approx(hky85_distance("GGAACCCC", "AAAACCCC"))
-    with (output / "distance_matrix.csv").open(encoding="utf-8", newline="") as handle:
+    with (output / "distance_matrix_hky85.csv").open(encoding="utf-8", newline="") as handle:
         rows = list(csv.reader(handle))
 
     assert rows[0] == ["", "Species_A", "Species_B", "Species_C"]

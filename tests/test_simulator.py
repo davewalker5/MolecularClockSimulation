@@ -3,6 +3,7 @@ import json
 import pytest
 
 from molecular_clock_simulation import SimulationConfig, run_simulation, write_outputs
+from strictclock.cli import main as strict_main
 from strictclock.explorer import (
     DARK_THEME,
     count_mutations,
@@ -20,6 +21,7 @@ from strictclock.explorer import (
 
 def make_config(**overrides):
     data = {
+        "clock_model": "strict",
         "sequence_length": 50,
         "number_of_taxa": 8,
         "random_seed": 12345,
@@ -188,6 +190,7 @@ def test_download_stem_validation_rejects_missing_paths_and_extensions(value):
 )
 def test_config_validation(bad_config, error):
     data = {
+        "clock_model": "strict",
         "sequence_length": 10,
         "number_of_taxa": 2,
         "random_seed": 1,
@@ -199,6 +202,42 @@ def test_config_validation(bad_config, error):
 
     with pytest.raises(ValueError, match=error):
         SimulationConfig.from_dict(data)
+
+
+@pytest.mark.parametrize("clock_model", [None, "relaxed"])
+def test_strict_config_rejects_wrong_intended_clock_model(clock_model):
+    """Confirm strict configs must explicitly identify the strict simulator.
+
+    :param clock_model: Missing or mismatched top-level simulator identifier.
+    :return: None.
+    """
+    data = {
+        "sequence_length": 10,
+        "number_of_taxa": 2,
+        "random_seed": 1,
+        "tree": {"topology": "balanced", "root_age": 1.0},
+        "clock": {"model": "strict", "mutation_rate": 0.1},
+        "substitution": {"model": "simple"},
+    }
+    if clock_model is not None:
+        # Omit the key for the None case to test that it is required.
+        data["clock_model"] = clock_model
+
+    with pytest.raises(ValueError, match="clock_model must be 'strict'"):
+        SimulationConfig.from_dict(data)
+
+
+def test_strict_cli_exits_for_relaxed_clock_config(tmp_path):
+    """Confirm the strict CLI exits clearly when given a relaxed clock file.
+
+    :param tmp_path: Temporary directory supplied by pytest.
+    :return: None.
+    """
+    config_path = tmp_path / "relaxed.json"
+    config_path.write_text('{"clock_model": "relaxed"}', encoding="utf-8")
+
+    with pytest.raises(SystemExit, match="clock_model must be 'strict'"):
+        strict_main(["--config", str(config_path), "--output-dir", str(tmp_path)])
 
 
 def distance_from_root(node, root):

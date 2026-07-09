@@ -34,14 +34,14 @@ def main(argv: list[str] | None = None) -> int:
     # Parse user input before loading the config so argparse can report usage errors.
     args = build_parser().parse_args(argv)
 
-    # The config fully defines the run, including the random seed for reproducibility.
-    config = load_config(args.config)
-    result = run_simulation(config)
+    try:
+        # The loader checks that the file explicitly targets the strict clock simulator.
+        config = load_config(args.config)
+        result = run_simulation(config)
+    except (OSError, ValueError) as error:
+        raise SystemExit(f"Error: {error}") from error
 
     # Output paths are printed so shell users can see exactly where artifacts landed.
-    written = write_outputs(result, args.config, args.output_dir)
+    _ = write_outputs(result, args.config, args.output_dir)
 
-    print(f"Wrote FASTA: {written['fasta']}")
-    print(f"Wrote Newick: {written['newick']}")
-    print(f"Wrote metadata: {written['metadata']}")
     return 0

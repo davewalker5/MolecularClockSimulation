@@ -1,9 +1,10 @@
 {
+  "clock_model": "strict",
   "sequence_length": 1000,
   "number_of_taxa": 8,
   "random_seed": 12345,
   "tree": {
-    "topology": "random",
+    "topology": "balanced",
     "root_age": 1.0
   },
   "clock": {

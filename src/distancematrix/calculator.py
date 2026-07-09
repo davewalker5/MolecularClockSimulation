@@ -393,14 +393,20 @@ def write_outputs(matrix: dict[str, Any], output_dir: str | Path) -> dict[str, P
     """Write JSON and CSV distance matrix files to an output directory.
 
     :param matrix: Distance matrix payload returned by calculate_distance_matrix.
-    :param output_dir: Directory where distance_matrix.json and distance_matrix.csv are written.
+    :param output_dir: Directory where distance_matrix_<type>.json and distance_matrix_<type>.csv are written.
     :return: Mapping of output format names to written file paths.
     """
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
 
-    json_path = output_path / "distance_matrix.json"
-    csv_path = output_path / "distance_matrix.csv"
+    # Include the metric in both filenames so multiple calculations can share one directory.
+    distance_type = matrix.get("distance_metric")
+    if not isinstance(distance_type, str):
+        raise ValueError("Distance matrix payload must contain a distance_metric")
+    _validate_distance_type(distance_type)
+    file_stem = f"distance_matrix_{distance_type}"
+    json_path = output_path / f"{file_stem}.json"
+    csv_path = output_path / f"{file_stem}.csv"
 
     # Delegate file-format details to the public writer helpers.
     write_json(matrix, json_path)

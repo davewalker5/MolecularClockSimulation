@@ -23,7 +23,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("-i", "--input", required=True, type=Path,
                         help="Path to an aligned FASTA file")
     parser.add_argument("-o", "--output", required=True, type=Path,
-                        help="Directory where distance_matrix.json and distance_matrix.csv will be written")
+                        help="Directory where distance_matrix_<type>.json and distance_matrix_<type>.csv will be written")
     parser.add_argument("-dt", "--distance-type", choices=DISTANCE_TYPES, default="hamming",
                         help="Distance metric to calculate: hamming, proportional, jc69, k80, f81, or hky85")
     return parser
@@ -42,12 +42,10 @@ def main(argv: list[str] | None = None) -> int:
         # Keep the CLI thin by delegating parsing, calculation, and writing to core code.
         sequences = read_fasta(args.input)
         matrix = calculate_distance_matrix(sequences, args.distance_type)
-        written = write_outputs(matrix, args.output)
+        _ = write_outputs(matrix, args.output)
     except ValueError as error:
         raise SystemExit(f"Error: {error}") from error
     except OSError as error:
         raise SystemExit(f"Error writing distance matrix outputs: {error}") from error
 
-    print(f"Wrote JSON: {written['json']}")
-    print(f"Wrote CSV: {written['csv']}")
     return 0

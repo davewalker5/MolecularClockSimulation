@@ -84,6 +84,7 @@ def build_config(
     # Keep the Streamlit controls mapped through the public config validator.
     return SimulationConfig.from_dict(
         {
+            "clock_model": "strict",
             "sequence_length": sequence_length,
             "number_of_taxa": number_of_taxa,
             "random_seed": random_seed,

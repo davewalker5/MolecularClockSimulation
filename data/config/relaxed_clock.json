@@ -1,4 +1,5 @@
 {
+  "clock_model": "relaxed",
   "simulation": {
     "name": "relaxed-clock-example",
     "random_seed": 42
