@@ -161,8 +161,8 @@ class _NewickParser:
             branch_length = float(raw_length)
         except ValueError as error:
             raise ValueError(f"Invalid Newick branch length: {raw_length!r}") from error
-        if not math.isfinite(branch_length) or branch_length < 0:
-            raise ValueError("Newick branch lengths must be finite and non-negative")
+        if not math.isfinite(branch_length):
+            raise ValueError("Newick branch lengths must be finite")
         return branch_length
 
     def _skip_whitespace(self) -> None:

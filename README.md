@@ -20,13 +20,14 @@ Detailed documentation, implementation notes and usage guides are available in t
 
 ## Current Features
 
-| Component                      | Purpose                                                            |
-| ------------------------------ | ------------------------------------------------------------------ |
-| Strict Molecular Clock Engine  | Simulate ultrametric evolutionary histories                        |
-| Relaxed Molecular Clock Engine | Simulate lineage-specific rate variation                           |
-| Distance Matrix Calculator     | Estimate evolutionary distances using multiple substitution models |
-| UPGMA Reconstruction           | Reconstruct phylogenetic trees from distance matrices              |
-| Interactive Explorers          | Combine the complete workflow into an educational environment      |
+| Component                       | Purpose                                                            |
+| ------------------------------- | ------------------------------------------------------------------ |
+| Strict Molecular Clock Engine   | Simulate ultrametric evolutionary histories                        |
+| Relaxed Molecular Clock Engine  | Simulate lineage-specific rate variation                           |
+| Distance Matrix Calculator      | Estimate evolutionary distances using multiple substitution models |
+| UPGMA Reconstruction            | Reconstruct rooted molecular-clock trees from distance matrices    |
+| Neighbor Joining Reconstruction | Reconstruct distance-based trees without a strict-clock assumption |
+| Interactive Explorers           | Combine the complete workflow into an educational environment      |
 
 ## Documentation
 

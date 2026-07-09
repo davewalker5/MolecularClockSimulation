@@ -34,6 +34,12 @@ declare -a DISTANCE_TYPES=(
     hky85
 )
 
+# Define available reconstruction algorithms
+declare -a RECONSTRUCTION_ALGORITHMS=(
+    upgma
+    nj
+)
+
 # Get the path to the output folder and the terminal sequences file
 stem=$(basename "$1")
 stem=${stem%.*}
@@ -48,14 +54,16 @@ for distance in "${DISTANCE_TYPES[@]}"; do
     # Calculate the distance matrix using the current substitution model
     python -m distancematrix --input "$terminal_sequences" --output "$output_folder" --distance-type "$distance"
 
-    # Reconstruct the phylogenetic tree
-    python -m phylogeny --input "$output_folder/distance_matrix_${distance}.json"
+    for algorithm in "${RECONSTRUCTION_ALGORITHMS[@]}"; do
+        # Reconstruct the phylogenetic tree
+        python -m phylogeny --input "$output_folder/distance_matrix_${distance}.json" --method $algorithm
 
-    # Create the comparison image
-    reconstructed_tree="$output_folder/upgma_${distance}.newick"
-    comparison_image="$output_folder/upgma_${distance}.png"
-    python -m treecomparison \
-        --source "$original_tree" \
-        --reconstructed "$reconstructed_tree" \
-        --output "$comparison_image"
+        # Create the comparison image
+        reconstructed_tree="$output_folder/${algorithm}_${distance}.newick"
+        comparison_image="$output_folder/${algorithm}_${distance}.png"
+        python -m treecomparison \
+            --source "$original_tree" \
+            --reconstructed "$reconstructed_tree" \
+            --output "$comparison_image"
+    done
 done
