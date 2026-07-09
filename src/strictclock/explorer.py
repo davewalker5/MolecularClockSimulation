@@ -11,7 +11,10 @@ from dataclasses import dataclass
 from pathlib import PurePath
 from typing import Any
 
-from molecular_clock_simulation.distance_analysis import render_distance_analysis_tab
+from molecular_clock_simulation.distance_analysis import (
+    render_distance_analysis_controls,
+    render_distance_analysis_tab,
+)
 from strictclock.simulator import (
     SimulationConfig,
     SimulationResult,
@@ -414,6 +417,9 @@ def render_app() -> None:
     st.title("Strict Molecular Clock Explorer")
 
     with st.sidebar:
+        simulation_sidebar_tab, distance_sidebar_tab = st.tabs(["Simulation", "Distance"])
+
+    with simulation_sidebar_tab:
         st.header("Simulation")
         number_of_taxa = st.slider(
             "Number of taxa",
@@ -476,6 +482,13 @@ def render_app() -> None:
     fasta = fasta_text(result)
     metadata = metadata_json(result)
     tree_dot = tree_to_dot(result.root)
+
+    with distance_sidebar_tab:
+        st.header("Distance")
+        render_distance_analysis_controls(
+            result.terminal_sequences,
+            state_key_prefix="strict",
+        )
 
     # The tree is the primary visual output for this explorer release.
     st.subheader("Phylogenetic Tree")

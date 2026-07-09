@@ -12,7 +12,10 @@ from dataclasses import dataclass
 from pathlib import PurePath
 from typing import Any
 
-from molecular_clock_simulation.distance_analysis import render_distance_analysis_tab
+from molecular_clock_simulation.distance_analysis import (
+    render_distance_analysis_controls,
+    render_distance_analysis_tab,
+)
 from relaxedclock.simulator import (
     RelaxedClockConfig,
     RelaxedClockResult,
@@ -616,6 +619,9 @@ def render_app() -> None:
     st.title("Relaxed Molecular Clock Explorer")
 
     with st.sidebar:
+        simulation_sidebar_tab, distance_sidebar_tab = st.tabs(["Simulation", "Distance"])
+
+    with simulation_sidebar_tab:
         st.header("Simulation")
         st.subheader("Tree")
         max_depth = st.slider(
@@ -738,6 +744,13 @@ def render_app() -> None:
     branch_lengths = result.config.outputs.newick_branch_lengths
     tree_dot = tree_to_dot(result.root, branch_lengths)
     tree_svg = tree_to_svg(result.root, branch_lengths)
+
+    with distance_sidebar_tab:
+        st.header("Distance")
+        render_distance_analysis_controls(
+            result.terminal_sequences,
+            state_key_prefix="relaxed",
+        )
 
     # The tree is the primary visual output for this explorer release.
     st.subheader("Phylogenetic Tree")
