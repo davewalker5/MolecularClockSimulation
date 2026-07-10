@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from common.graphviz import dot_escape as _dot_escape
+
 from phylogeny.neighbor_joining import neighbor_joining
 from phylogeny.upgma import Cluster, to_newick, upgma
 
@@ -140,13 +142,3 @@ def _cluster_label(cluster: Cluster) -> str:
     if cluster.height == 0.0:
         return "cluster"
     return f"cluster\nheight {cluster.height:.4g}"
-
-
-def _dot_escape(value: str) -> str:
-    """Escape a value for use in a quoted DOT string.
-
-    :param value: Raw DOT label or identifier value.
-    :return: Escaped value safe for a quoted DOT string.
-    """
-    # Escape backslashes first so later replacements are not double-interpreted by Graphviz.
-    return value.replace("\\", "\\\\").replace("\n", "\\n").replace("\"", "\\\"")

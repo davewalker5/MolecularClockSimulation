@@ -5,11 +5,9 @@ from __future__ import annotations
 import html
 import io
 import json
-import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
-from pathlib import PurePath
 from typing import Any
 
 from molecular_clock_simulation.distance_analysis import (
@@ -26,19 +24,30 @@ from relaxedclock.simulator import (
     RelaxedClockConfig,
     RelaxedClockResult,
     RelaxedTreeNode,
-    format_fasta,
     run_simulation,
     summary_statistics,
 )
-from strictclock.explorer import DARK_THEME, dark_theme_css
 
-DOWNLOAD_OPTIONS = (
-    "FASTA",
-    "Newick (True Tree)",
-    "Metadata JSON",
-    "Tree PNG",
-    "Distance Matrix (JSON)",
-    "Distance Matrix (CSV)",
+from common import (
+    DOWNLOAD_TERMINAL_SEQUENCES,
+    DOWNLOAD_TRUE_TREE_NEWICK,
+    DOWNLOAD_TRUE_TREE_PNG,
+    DOWNLOAD_SIMULATION_METADATA,
+    DOWNLOAD_DISTANCE_MATRIX_JSON,
+    DOWNLOAD_DISTANCE_MATRIX_CSV,
+    DOWNLOAD_RECONSTRUCTED_TREE_NEWICK,
+    DOWNLOAD_RECONSTRUCTED_TREE_PNG,
+    DOWNLOAD_OPTIONS,
+    DARK_THEME,
+    dark_theme_css,
+    default_download_stem,
+    download_filename,
+    dot_escape,
+    format_fasta,
+    metadata_json,
+    render_dot_png,
+    synchronize_download_state,
+    validate_download_stem,
 )
 
 BRANCH_LENGTH_LABELS = {
@@ -404,15 +413,6 @@ def node_label(node: RelaxedTreeNode) -> str:
     return f"{name}\\ndepth {node.depth}"
 
 
-def dot_escape(value: str) -> str:
-    """Escape a value for use in a quoted DOT string.
-
-    :param value: Raw string value to embed in DOT source.
-    :return: Escaped value safe for a quoted DOT string.
-    """
-    return value.replace("\\", "\\\\").replace('"', '\\"')
-
-
 def fasta_text(result: RelaxedClockResult) -> str:
     """Return terminal sequences as FASTA text.
 
@@ -420,16 +420,6 @@ def fasta_text(result: RelaxedClockResult) -> str:
     :return: FASTA-formatted terminal sequences.
     """
     return format_fasta(result.terminal_sequences)
-
-
-def metadata_json(result: RelaxedClockResult) -> str:
-    """Return simulation metadata as formatted JSON text.
-
-    :param result: Completed simulation result.
-    :return: Pretty-printed metadata JSON ending with a newline.
-    """
-    # Sort keys so downloaded metadata is stable and easier to diff.
-    return json.dumps(result.to_metadata(), indent=2, sort_keys=True) + "\n"
 
 
 def tree_png_bytes(
@@ -445,18 +435,8 @@ def tree_png_bytes(
     if isinstance(tree, RelaxedTreeNode):
         return scaled_tree_png_bytes(tree, branch_lengths)
 
-    # Streamlit can display DOT directly, but downloads need a concrete image file.
-    if shutil.which("dot") is None:
-        raise RuntimeError("Graphviz 'dot' command is required for PNG export")
-
-    completed = subprocess.run(
-        ["dot", "-Tpng"],
-        input=tree.encode("utf-8"),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=True,
-    )
-    return completed.stdout
+    # DOT-based reconstruction graphics use the shared Graphviz renderer.
+    return render_dot_png(tree)
 
 
 def scaled_tree_png_bytes(
@@ -530,35 +510,6 @@ def scaled_tree_png_bytes(
     return output.getvalue()
 
 
-def validate_download_stem(value: str) -> tuple[str | None, str | None]:
-    """Validate a user-entered download file stem.
-
-    :param value: Raw user-entered file stem.
-    :return: Tuple containing the cleaned stem and error message, one of which is None.
-    """
-    stem = value.strip()
-    if not stem:
-        return None, "Enter a file stem before downloads are available."
-    # Reject path-like values because Streamlit download names should be filenames only.
-    if "/" in stem or "\\" in stem:
-        return None, "Enter a file stem only, without a folder or path."
-    if stem in {".", ".."}:
-        return None, "Enter a file stem, not a relative path marker."
-    if PurePath(stem).suffix:
-        return None, "Enter the name without a file extension."
-    return stem, None
-
-
-def download_filename(stem: str, extension: str) -> str:
-    """Build a download filename from a validated stem and extension.
-
-    :param stem: Validated file stem without path or extension.
-    :param extension: File extension without a leading dot.
-    :return: Complete filename for a download.
-    """
-    return f"{stem}.{extension}"
-
-
 def download_payload(
     selection: str,
     result: RelaxedClockResult,
@@ -568,6 +519,8 @@ def download_payload(
     tree_dot: str | RelaxedTreeNode,
     branch_lengths: str = "genetic_change",
     distance_matrix: dict[str, Any] | None = None,
+    reconstructed_newick: str | None = None,
+    reconstructed_dot: str | None = None,
 ) -> tuple[str | bytes, str, str]:
     """Return data, extension, and MIME type for one download option.
 
@@ -578,25 +531,37 @@ def download_payload(
     :param tree_dot: DOT source or relaxed tree root for the generated tree.
     :param branch_lengths: Branch value used to scale tree image downloads.
     :param distance_matrix: Calculated distance matrix payload, when available.
+    :param reconstructed_newick: Reconstructed Newick text, when available.
+    :param reconstructed_dot: Reconstructed tree DOT source, when available.
     :return: Tuple of download data, filename extension, and MIME type.
     """
     # Centralize option handling so the UI and tests share one source of truth.
-    if selection == "FASTA":
+    if selection == DOWNLOAD_TERMINAL_SEQUENCES:
         return fasta, "fasta", "text/plain"
-    if selection == "Newick (True Tree)":
+    if selection == DOWNLOAD_TRUE_TREE_NEWICK:
         return result.newick + "\n", "newick", "text/plain"
-    if selection == "Metadata JSON":
+    if selection == DOWNLOAD_SIMULATION_METADATA:
         return metadata, "json", "application/json"
-    if selection == "Tree PNG":
+    if selection == DOWNLOAD_TRUE_TREE_PNG:
         return tree_png_bytes(tree_dot, branch_lengths), "png", "image/png"
-    if selection == "Distance Matrix (JSON)":
+    if selection == DOWNLOAD_DISTANCE_MATRIX_JSON:
         if distance_matrix is None:
             raise ValueError("You must calculate a distance matrix before downloading it.")
         return json.dumps(distance_matrix, indent=2) + "\n", "json", "application/json"
-    if selection == "Distance Matrix (CSV)":
+    if selection == DOWNLOAD_DISTANCE_MATRIX_CSV:
         if distance_matrix is None:
             raise ValueError("You must calculate a distance matrix before downloading it.")
         return distance_matrix_csv_text(distance_matrix), "csv", "text/csv"
+    if selection == DOWNLOAD_RECONSTRUCTED_TREE_NEWICK:
+        if reconstructed_newick is None:
+            raise ValueError("You must reconstruct a tree before downloading it.")
+        # Add a trailing newline so the downloaded Newick is a complete text file.
+        return reconstructed_newick.rstrip("\n") + "\n", "newick", "text/plain"
+    if selection == DOWNLOAD_RECONSTRUCTED_TREE_PNG:
+        if reconstructed_dot is None:
+            raise ValueError("You must reconstruct a tree before downloading it.")
+        # Render the same DOT source displayed in the reconstruction results tab.
+        return tree_png_bytes(reconstructed_dot), "png", "image/png"
     raise ValueError(f"Unknown download selection: {selection}")
 
 
@@ -642,6 +607,9 @@ def render_app() -> None:
     reconstruction_error_key = "relaxed_reconstruction_error"
     reconstruction_dot_key = "relaxed_reconstruction_dot"
     reconstruction_newick_key = "relaxed_reconstruction_newick"
+    download_selection_key = "relaxed_download_selection"
+    download_stem_key = "relaxed_download_stem"
+    download_unavailable_key = "relaxed_download_unavailable"
     main_tab_labels = [
         "FASTA Sequences",
         "Newick Output",
@@ -651,7 +619,11 @@ def render_app() -> None:
     ]
 
     def sync_main_tab_from_sidebar() -> None:
-        """Select the matching main output tab when the sidebar tab changes."""
+        """Select the matching main output tab when the sidebar tab changes.
+
+        :return: None.
+        """
+        # Read the sidebar's persisted selection before mapping it to an output tab.
         sidebar_tab = st.session_state.get(sidebar_tab_key)
         if sidebar_tab == "Simulation":
             st.session_state[main_tab_key] = "FASTA Sequences"
@@ -660,8 +632,29 @@ def render_app() -> None:
         elif sidebar_tab == "Reconstruction":
             st.session_state[main_tab_key] = "Reconstruction"
 
+    def reset_download_stem() -> None:
+        """Reset the editable file stem after the download selection changes.
+
+        :return: None.
+        """
+        # Selection changes intentionally overwrite any user-edited file stem.
+        synchronize_download_state(
+            st.session_state,
+            selection_key=download_selection_key,
+            stem_key=download_stem_key,
+            unavailable_key=download_unavailable_key,
+            distance_matrix_key="relaxed_distance_matrix",
+            reconstructed_newick_key=reconstruction_newick_key,
+            reconstructed_dot_key=reconstruction_dot_key,
+            reset_stem=True,
+        )
+
     def sync_sidebar_tab_from_main() -> None:
-        """Select the matching sidebar tab when the main output tab changes."""
+        """Select the matching sidebar tab when the main output tab changes.
+
+        :return: None.
+        """
+        # Map output tabs back to the sidebar section that controls their content.
         main_tab = st.session_state.get(main_tab_key)
         if main_tab in {"FASTA Sequences", "Newick Output"}:
             st.session_state[sidebar_tab_key] = "Simulation"
@@ -897,19 +890,47 @@ def render_app() -> None:
             with st.expander("Reconstructed Newick"):
                 st.code(st.session_state[reconstruction_newick_key], language="text")
     with download_tab:
-        # A single selector and button avoids four competing download controls.
+        # Initialize the editable stem before Streamlit creates its stateful widget.
+        st.session_state.setdefault(
+            download_stem_key,
+            default_download_stem(
+                st.session_state.get(download_selection_key, DOWNLOAD_OPTIONS[0]),
+                st.session_state.get("relaxed_distance_matrix"),
+            ),
+        )
         download_selection = st.selectbox(
             "Download",
             options=DOWNLOAD_OPTIONS,
+            key=download_selection_key,
+            on_change=reset_download_stem,
+        )
+        unavailable_warning = synchronize_download_state(
+            st.session_state,
+            selection_key=download_selection_key,
+            stem_key=download_stem_key,
+            unavailable_key=download_unavailable_key,
+            distance_matrix_key="relaxed_distance_matrix",
+            reconstructed_newick_key=reconstruction_newick_key,
+            reconstructed_dot_key=reconstruction_dot_key,
         )
         download_stem_input = st.text_input(
             "File stem",
-            value="",
-            placeholder="example_relaxed_run",
+            key=download_stem_key,
             help="Enter the name to use for downloads, without a path or extension.",
+            disabled=unavailable_warning is not None,
         )
         download_stem, download_stem_error = validate_download_stem(download_stem_input)
-        if download_stem_error:
+        if unavailable_warning:
+            st.warning(unavailable_warning)
+            st.download_button(
+                "Download",
+                data="",
+                file_name="download_unavailable",
+                mime="application/octet-stream",
+                width="stretch",
+                disabled=True,
+            )
+        elif download_stem_error:
             # Keep the button visible but disabled so the required action is clear.
             st.warning(download_stem_error)
             st.download_button(
@@ -931,13 +952,11 @@ def render_app() -> None:
                     tree_dot=result.root,
                     branch_lengths=branch_lengths,
                     distance_matrix=st.session_state.get("relaxed_distance_matrix"),
+                    reconstructed_newick=st.session_state.get(reconstruction_newick_key),
+                    reconstructed_dot=st.session_state.get(reconstruction_dot_key),
                 )
             except ValueError as error:
-                if download_selection in {"Distance Matrix (JSON)", "Distance Matrix (CSV)"}:
-                    if st.button("Download", width="stretch"):
-                        st.warning(str(error))
-                else:
-                    st.warning(str(error))
+                st.warning(str(error))
             except (RuntimeError, subprocess.CalledProcessError) as error:
                 st.warning(f"{download_selection} export is unavailable: {error}")
             else:
