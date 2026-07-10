@@ -9,10 +9,12 @@ import sys
 from dataclasses import dataclass
 from typing import Any
 
+from distancematrix.calculator import calculate_distance_matrix
 from molecular_clock_simulation.distance_analysis import (
     distance_matrix_csv_text,
     render_distance_analysis_controls,
     render_distance_analysis_tab,
+    selected_distance_model,
 )
 from molecular_clock_simulation.reconstruction import (
     reconstructed_tree_newick,
@@ -245,6 +247,7 @@ def main() -> int:
         "run",
         __file__,
         "--server.headless=true",
+        *sys.argv[1:],
     ]
     return subprocess.call(command)
 
@@ -418,6 +421,17 @@ def render_app() -> None:
         if st.button("Reconstruct Tree", key="strict_reconstruct_tree", width="stretch"):
             st.session_state[main_tab_key] = "Reconstruction"
             matrix_payload = st.session_state.get("strict_distance_matrix")
+            if matrix_payload is None:
+                # A container-side WebSocket reconnect can create a fresh Streamlit
+                # session between sidebar actions. Rebuild this inexpensive derived
+                # value from the current simulation instead of losing the workflow.
+                distance_model = selected_distance_model("strict")
+                matrix_payload = calculate_distance_matrix(
+                    result.terminal_sequences,
+                    distance_type=distance_model,
+                )
+                st.session_state["strict_distance_model"] = distance_model
+                st.session_state["strict_distance_matrix"] = matrix_payload
             if matrix_payload is None:
                 st.session_state[reconstruction_warning_key] = True
                 st.session_state.pop(reconstruction_error_key, None)
