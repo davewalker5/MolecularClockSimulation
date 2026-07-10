@@ -29,34 +29,17 @@ from strictclock.simulator import (
     run_simulation,
 )
 
-DOWNLOAD_OPTIONS = (
-    "FASTA",
-    "Newick (True Tree)",
-    "Metadata JSON",
-    "Tree PNG",
-    "Distance Matrix (JSON)",
-    "Distance Matrix (CSV)",
+from common import (
+    DOWNLOAD_TERMINAL_SEQUENCES,
+    DOWNLOAD_TRUE_TREE_NEWICK,
+    DOWNLOAD_TRUE_TREE_PNG,
+    DOWNLOAD_SIMULATION_METADATA,
+    DOWNLOAD_DISTANCE_MATRIX_JSON,
+    DOWNLOAD_DISTANCE_MATRIX_CSV,
+    DOWNLOAD_OPTIONS,
+    DARK_THEME,
+    dark_theme_css
 )
-
-DARK_THEME = {
-    "page_bg": "#0b1220",
-    "surface": "#111827",
-    "surface_elevated": "#162032",
-    "row_stripe": "#0f172a",
-    "row_hover": "#172235",
-    "border": "#243042",
-    "border_strong": "#334155",
-    "text": "#e5e7eb",
-    "text_muted": "#9ca3af",
-    "text_muted_strong": "#cbd5e1",
-    "text_subtle": "#94a3b8",
-    "link": "#7cc4ff",
-    "link_hover": "#a5d8ff",
-    "button": "#2563eb",
-    "button_hover": "#1d4ed8",
-    "white": "#f8fafc",
-}
-
 
 @dataclass(frozen=True)
 class ExplorerDefaults:
@@ -274,128 +257,23 @@ def download_payload(
     :return: Tuple of download data, filename extension, and MIME type.
     """
     # Centralize option handling so the UI and tests share one source of truth.
-    if selection == "FASTA":
+    if selection == DOWNLOAD_TERMINAL_SEQUENCES:
         return fasta, "fasta", "text/plain"
-    if selection == "Newick (True Tree)":
+    if selection == DOWNLOAD_TRUE_TREE_NEWICK:
         return result.newick + "\n", "newick", "text/plain"
-    if selection == "Metadata JSON":
+    if selection == DOWNLOAD_SIMULATION_METADATA:
         return metadata, "json", "application/json"
-    if selection == "Tree PNG":
+    if selection == DOWNLOAD_TRUE_TREE_PNG:
         return tree_png_bytes(tree_dot), "png", "image/png"
-    if selection == "Distance Matrix (JSON)":
+    if selection == DOWNLOAD_DISTANCE_MATRIX_JSON:
         if distance_matrix is None:
             raise ValueError("You must calculate a distance matrix before downloading it.")
         return json.dumps(distance_matrix, indent=2) + "\n", "json", "application/json"
-    if selection == "Distance Matrix (CSV)":
+    if selection == DOWNLOAD_DISTANCE_MATRIX_CSV:
         if distance_matrix is None:
             raise ValueError("You must calculate a distance matrix before downloading it.")
         return distance_matrix_csv_text(distance_matrix), "csv", "text/csv"
     raise ValueError(f"Unknown download selection: {selection}")
-
-
-def dark_theme_css() -> str:
-    """Build app-specific CSS for the Field Notes dark theme.
-
-    :return: CSS rules to inject into the Streamlit app.
-    """
-    colors = DARK_THEME
-    # Streamlit's built-in theme handles the base palette; these rules tune widgets.
-    return f"""
-    <style>
-    :root {{
-      color-scheme: dark;
-    }}
-
-    .stApp {{
-      background: {colors["page_bg"]};
-      color: {colors["text"]};
-    }}
-
-    [data-testid="stSidebar"],
-    [data-testid="stHeader"],
-    [data-testid="stToolbar"] {{
-      background: {colors["surface"]};
-      border-color: {colors["border"]};
-    }}
-
-    [data-testid="stSidebar"] {{
-      border-right: 1px solid {colors["border"]};
-    }}
-
-    h1, h2, h3, h4, h5, h6,
-    .stMarkdown,
-    .stText,
-    label,
-    p {{
-      color: {colors["text"]};
-    }}
-
-    a {{
-      color: {colors["link"]};
-    }}
-
-    a:hover {{
-      color: {colors["link_hover"]};
-    }}
-
-    [data-testid="stMetric"],
-    [data-testid="stCodeBlock"],
-    [data-testid="stGraphVizChart"],
-    div[data-baseweb="select"] > div,
-    div[data-baseweb="input"] > div {{
-      background: {colors["surface_elevated"]};
-      border-color: {colors["border_strong"]};
-      color: {colors["text"]};
-    }}
-
-    [data-testid="stMetric"] {{
-      border: 1px solid {colors["border_strong"]};
-      border-radius: 8px;
-      padding: 0.75rem 0.9rem;
-    }}
-
-    [data-testid="stMetricLabel"],
-    [data-testid="stCaptionContainer"],
-    .st-emotion-cache-1wivap2 {{
-      color: {colors["text_muted"]};
-    }}
-
-    .stTabs [data-baseweb="tab-list"] {{
-      border-bottom: 1px solid {colors["border"]};
-    }}
-
-    .stTabs [data-baseweb="tab"] {{
-      color: {colors["text_muted_strong"]};
-    }}
-
-    .stTabs [aria-selected="true"] {{
-      color: {colors["white"]};
-      border-bottom-color: {colors["link"]};
-    }}
-
-    .stButton > button,
-    .stDownloadButton > button {{
-      background: {colors["button"]};
-      border-color: {colors["button"]};
-      color: {colors["white"]};
-      border-radius: 6px;
-    }}
-
-    .stButton > button:hover,
-    .stDownloadButton > button:hover {{
-      background: {colors["button_hover"]};
-      border-color: {colors["button_hover"]};
-      color: {colors["white"]};
-    }}
-
-    .stButton > button:disabled,
-    .stDownloadButton > button:disabled {{
-      background: {colors["row_stripe"]};
-      border-color: {colors["border"]};
-      color: {colors["text_subtle"]};
-    }}
-    </style>
-    """
 
 
 def main() -> int:
@@ -662,7 +540,7 @@ def render_app() -> None:
                     distance_matrix=st.session_state.get("strict_distance_matrix"),
                 )
             except ValueError as error:
-                if download_selection in {"Distance Matrix (JSON)", "Distance Matrix (CSV)"}:
+                if download_selection in {DOWNLOAD_DISTANCE_MATRIX_JSON, DOWNLOAD_DISTANCE_MATRIX_CSV}:
                     if st.button("Download", width="stretch"):
                         st.warning(str(error))
                 else:

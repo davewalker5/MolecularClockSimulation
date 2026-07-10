@@ -12,7 +12,6 @@ from typing import Any
 
 from biology import BiologySettings, is_dna_alphabet, load_biology_settings, mutate_base
 
-
 @dataclass(frozen=True)
 class SimulationSettings:
     name: str

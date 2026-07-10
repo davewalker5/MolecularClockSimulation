@@ -5,13 +5,11 @@ import pytest
 from relaxedclock.cli import main
 from relaxedclock import RelaxedClockConfig, run_simulation, write_outputs
 from relaxedclock.explorer import (
-    DARK_THEME,
     build_config,
     count_mutations,
     download_filename,
     download_payload,
     fasta_text,
-    dark_theme_css,
     metadata_json,
     summarize_result,
     tree_png_bytes,
@@ -20,6 +18,16 @@ from relaxedclock.explorer import (
     validate_download_stem,
 )
 
+from common import (
+    DOWNLOAD_TERMINAL_SEQUENCES,
+    DOWNLOAD_TRUE_TREE_NEWICK,
+    DOWNLOAD_TRUE_TREE_PNG,
+    DOWNLOAD_SIMULATION_METADATA,
+    DOWNLOAD_DISTANCE_MATRIX_JSON,
+    DOWNLOAD_DISTANCE_MATRIX_CSV,
+    DARK_THEME,
+    dark_theme_css
+)
 
 def make_config(**overrides):
     """Build a valid relaxed clock config with optional top-level overrides.
@@ -301,12 +309,12 @@ def test_relaxed_download_stem_validation_builds_expected_filenames():
 @pytest.mark.parametrize(
     "selection,extension,mime",
     [
-        ("FASTA", "fasta", "text/plain"),
-        ("Newick (True Tree)", "newick", "text/plain"),
-        ("Metadata JSON", "json", "application/json"),
-        ("Tree PNG", "png", "image/png"),
-        ("Distance Matrix (JSON)", "json", "application/json"),
-        ("Distance Matrix (CSV)", "csv", "text/csv"),
+        (DOWNLOAD_TERMINAL_SEQUENCES, "fasta", "text/plain"),
+        (DOWNLOAD_TRUE_TREE_NEWICK, "newick", "text/plain"),
+        (DOWNLOAD_SIMULATION_METADATA, "json", "application/json"),
+        (DOWNLOAD_TRUE_TREE_PNG, "png", "image/png"),
+        (DOWNLOAD_DISTANCE_MATRIX_JSON, "json", "application/json"),
+        (DOWNLOAD_DISTANCE_MATRIX_CSV, "csv", "text/csv"),
     ],
 )
 def test_relaxed_download_payload_matches_selected_format(selection, extension, mime):
@@ -342,14 +350,14 @@ def test_relaxed_download_payload_matches_selected_format(selection, extension, 
 
     assert actual_extension == extension
     assert actual_mime == mime
-    if selection == "Tree PNG":
+    if selection == DOWNLOAD_TRUE_TREE_PNG:
         assert data.startswith(b"\x89PNG\r\n\x1a\n")
     else:
         assert isinstance(data, str)
         assert data
 
 
-@pytest.mark.parametrize("selection", ["Distance Matrix (JSON)", "Distance Matrix (CSV)"])
+@pytest.mark.parametrize("selection", [DOWNLOAD_DISTANCE_MATRIX_JSON, DOWNLOAD_DISTANCE_MATRIX_CSV])
 def test_relaxed_distance_matrix_download_requires_calculated_matrix(selection):
     """Confirm distance matrix export requires prior calculation.
 
@@ -396,7 +404,7 @@ def test_relaxed_distance_matrix_download_serializes_json_payload():
     }
 
     data, extension, mime = download_payload(
-        "Distance Matrix (JSON)",
+        DOWNLOAD_DISTANCE_MATRIX_JSON,
         result,
         fasta=fasta_text(result),
         metadata=metadata_json(result),
@@ -430,7 +438,7 @@ def test_relaxed_distance_matrix_csv_download_serializes_csv_payload():
     }
 
     data, extension, mime = download_payload(
-        "Distance Matrix (CSV)",
+        DOWNLOAD_DISTANCE_MATRIX_CSV,
         result,
         fasta=fasta_text(result),
         metadata=metadata_json(result),

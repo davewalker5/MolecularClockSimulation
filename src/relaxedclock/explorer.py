@@ -30,15 +30,17 @@ from relaxedclock.simulator import (
     run_simulation,
     summary_statistics,
 )
-from strictclock.explorer import DARK_THEME, dark_theme_css
 
-DOWNLOAD_OPTIONS = (
-    "FASTA",
-    "Newick (True Tree)",
-    "Metadata JSON",
-    "Tree PNG",
-    "Distance Matrix (JSON)",
-    "Distance Matrix (CSV)",
+from common import (
+    DOWNLOAD_TERMINAL_SEQUENCES,
+    DOWNLOAD_TRUE_TREE_NEWICK,
+    DOWNLOAD_TRUE_TREE_PNG,
+    DOWNLOAD_SIMULATION_METADATA,
+    DOWNLOAD_DISTANCE_MATRIX_JSON,
+    DOWNLOAD_DISTANCE_MATRIX_CSV,
+    DOWNLOAD_OPTIONS,
+    DARK_THEME,
+    dark_theme_css
 )
 
 BRANCH_LENGTH_LABELS = {
@@ -581,19 +583,19 @@ def download_payload(
     :return: Tuple of download data, filename extension, and MIME type.
     """
     # Centralize option handling so the UI and tests share one source of truth.
-    if selection == "FASTA":
+    if selection == DOWNLOAD_TERMINAL_SEQUENCES:
         return fasta, "fasta", "text/plain"
-    if selection == "Newick (True Tree)":
+    if selection == DOWNLOAD_TRUE_TREE_NEWICK:
         return result.newick + "\n", "newick", "text/plain"
-    if selection == "Metadata JSON":
+    if selection == DOWNLOAD_SIMULATION_METADATA:
         return metadata, "json", "application/json"
-    if selection == "Tree PNG":
+    if selection == DOWNLOAD_TRUE_TREE_PNG:
         return tree_png_bytes(tree_dot, branch_lengths), "png", "image/png"
-    if selection == "Distance Matrix (JSON)":
+    if selection == DOWNLOAD_DISTANCE_MATRIX_JSON:
         if distance_matrix is None:
             raise ValueError("You must calculate a distance matrix before downloading it.")
         return json.dumps(distance_matrix, indent=2) + "\n", "json", "application/json"
-    if selection == "Distance Matrix (CSV)":
+    if selection == DOWNLOAD_DISTANCE_MATRIX_CSV:
         if distance_matrix is None:
             raise ValueError("You must calculate a distance matrix before downloading it.")
         return distance_matrix_csv_text(distance_matrix), "csv", "text/csv"
@@ -933,7 +935,7 @@ def render_app() -> None:
                     distance_matrix=st.session_state.get("relaxed_distance_matrix"),
                 )
             except ValueError as error:
-                if download_selection in {"Distance Matrix (JSON)", "Distance Matrix (CSV)"}:
+                if download_selection in {DOWNLOAD_DISTANCE_MATRIX_JSON, DOWNLOAD_DISTANCE_MATRIX_CSV}:
                     if st.button("Download", width="stretch"):
                         st.warning(str(error))
                 else:
