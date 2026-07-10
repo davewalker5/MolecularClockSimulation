@@ -7,6 +7,8 @@ from pathlib import PurePath
 from typing import Any
 
 from common.constants import (
+    DOWNLOAD_CALIBRATED_TREE_NEWICK,
+    DOWNLOAD_CALIBRATED_TREE_PNG,
     DOWNLOAD_DISTANCE_MATRIX_CSV,
     DOWNLOAD_DISTANCE_MATRIX_JSON,
     DOWNLOAD_RECONSTRUCTED_TREE_NEWICK,
@@ -44,6 +46,11 @@ def default_download_stem(
         # The payload records the method that actually produced the current matrix.
         method = distance_matrix.get("distance_metric") if distance_matrix else None
         return f"distance_matrix_{method}" if method else "distance_matrix"
+
+    if selection in {DOWNLOAD_CALIBRATED_TREE_NEWICK, DOWNLOAD_CALIBRATED_TREE_PNG}:
+        # Calibration inherits the distance method used to reconstruct its input tree.
+        method = distance_matrix.get("distance_metric") if distance_matrix else None
+        return f"calibrated_tree_{method}" if method else "calibrated_tree"
 
     raise ValueError(f"Unknown download selection: {selection}")
 

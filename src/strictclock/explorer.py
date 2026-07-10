@@ -38,6 +38,8 @@ from common import (
     DOWNLOAD_DISTANCE_MATRIX_CSV,
     DOWNLOAD_RECONSTRUCTED_TREE_NEWICK,
     DOWNLOAD_RECONSTRUCTED_TREE_PNG,
+    DOWNLOAD_CALIBRATED_TREE_NEWICK,
+    DOWNLOAD_CALIBRATED_TREE_PNG,
     DOWNLOAD_OPTIONS,
     DARK_THEME,
     dark_theme_css,
@@ -192,6 +194,8 @@ def download_payload(
     distance_matrix: dict[str, Any] | None = None,
     reconstructed_newick: str | None = None,
     reconstructed_dot: str | None = None,
+    calibrated_newick: str | None = None,
+    calibrated_dot: str | None = None,
 ) -> tuple[str | bytes, str, str]:
     """Return data, extension, and MIME type for one download option.
 
@@ -203,6 +207,8 @@ def download_payload(
     :param distance_matrix: Calculated distance matrix payload, when available.
     :param reconstructed_newick: Reconstructed Newick text, when available.
     :param reconstructed_dot: Reconstructed tree DOT source, when available.
+    :param calibrated_newick: Calibrated Newick text, when available.
+    :param calibrated_dot: Calibrated tree DOT source, when available.
     :return: Tuple of download data, filename extension, and MIME type.
     """
     # Centralize option handling so the UI and tests share one source of truth.
@@ -232,6 +238,14 @@ def download_payload(
             raise ValueError("You must reconstruct a tree before downloading it.")
         # Render the same DOT source displayed in the reconstruction results tab.
         return tree_png_bytes(reconstructed_dot), "png", "image/png"
+    if selection == DOWNLOAD_CALIBRATED_TREE_NEWICK:
+        if calibrated_newick is None:
+            raise ValueError("You must calibrate a tree before downloading it.")
+        return calibrated_newick.rstrip("\n") + "\n", "newick", "text/plain"
+    if selection == DOWNLOAD_CALIBRATED_TREE_PNG:
+        if calibrated_dot is None:
+            raise ValueError("You must calibrate a tree before downloading it.")
+        return tree_png_bytes(calibrated_dot), "png", "image/png"
     raise ValueError(f"Unknown download selection: {selection}")
 
 
@@ -427,7 +441,11 @@ def render_app() -> None:
         default_stem = default_download_stem(
             selection, st.session_state.get("strict_distance_matrix")
         )
-        stem_input = st.text_input("File stem", value=default_stem)
+        stem_input = st.text_input(
+            "File stem",
+            value=default_stem,
+            key=f"strict_download_stem_{selection}",
+        )
         stem, stem_error = validate_download_stem(stem_input)
         try:
             data, extension, mime = download_payload(
@@ -439,6 +457,8 @@ def render_app() -> None:
                 distance_matrix=st.session_state.get("strict_distance_matrix"),
                 reconstructed_newick=st.session_state.get("strict_reconstruction_newick"),
                 reconstructed_dot=st.session_state.get("strict_reconstruction_dot"),
+                calibrated_newick=st.session_state.get("strict_calibration_newick"),
+                calibrated_dot=st.session_state.get("strict_calibration_dot"),
             )
         except (ValueError, RuntimeError, subprocess.CalledProcessError) as error:
             st.warning(str(error))

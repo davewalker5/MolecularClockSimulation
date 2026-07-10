@@ -27,6 +27,8 @@ from common import (
     DOWNLOAD_DISTANCE_MATRIX_CSV,
     DOWNLOAD_RECONSTRUCTED_TREE_NEWICK,
     DOWNLOAD_RECONSTRUCTED_TREE_PNG,
+    DOWNLOAD_CALIBRATED_TREE_NEWICK,
+    DOWNLOAD_CALIBRATED_TREE_PNG,
     DARK_THEME,
     dark_theme_css
 )
@@ -357,6 +359,38 @@ def test_relaxed_download_payload_matches_selected_format(selection, extension, 
     else:
         assert isinstance(data, str)
         assert data
+
+
+@pytest.mark.parametrize(
+    "selection,extension",
+    [
+        (DOWNLOAD_CALIBRATED_TREE_NEWICK, "newick"),
+        (DOWNLOAD_CALIBRATED_TREE_PNG, "png"),
+    ],
+)
+def test_relaxed_calibrated_tree_download_payload(selection, extension):
+    """Confirm relaxed calibrated trees support both download formats.
+
+    :param selection: Calibrated tree download option under test.
+    :param extension: Expected filename extension.
+    :return: None.
+    """
+    result = run_simulation(make_config())
+    data, actual_extension, _ = download_payload(
+        selection,
+        result,
+        fasta=fasta_text(result),
+        metadata=metadata_json(result),
+        tree_dot=result.root,
+        calibrated_newick="(A:10,B:10);",
+        calibrated_dot="digraph calibrated { A -> B; }",
+    )
+
+    assert actual_extension == extension
+    if selection == DOWNLOAD_CALIBRATED_TREE_PNG:
+        assert data.startswith(b"\x89PNG\r\n\x1a\n")
+    else:
+        assert data == "(A:10,B:10);\n"
 
 
 @pytest.mark.parametrize("selection", [DOWNLOAD_DISTANCE_MATRIX_JSON, DOWNLOAD_DISTANCE_MATRIX_CSV])
