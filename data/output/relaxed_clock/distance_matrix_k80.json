@@ -1,14 +1,14 @@
 {
   "distance_metric": "k80",
   "labels": [
-    "Taxon_1",
-    "Taxon_2",
-    "Taxon_3",
-    "Taxon_4",
-    "Taxon_5",
-    "Taxon_6",
-    "Taxon_7",
-    "Taxon_8"
+    "taxon_1",
+    "taxon_2",
+    "taxon_3",
+    "taxon_4",
+    "taxon_5",
+    "taxon_6",
+    "taxon_7",
+    "taxon_8"
   ],
   "matrix": [
     [

@@ -1,0 +1,10 @@
+{
+  "calibration_taxa": [
+    "taxon_1",
+    "taxon_2"
+  ],
+  "calibration_age_mya": 10.0,
+  "reconstructed_depth": 0.0035215000000000003,
+  "scale_factor": 2839.698991906858,
+  "units": "million years"
+}

@@ -18,6 +18,10 @@ from molecular_clock_simulation.reconstruction import (
     reconstructed_tree_to_dot,
     reconstruct_tree,
 )
+from molecular_clock_simulation.calibration_ui import (
+    clear_calibration_state,
+    render_calibration_tab,
+)
 from strictclock.simulator import (
     SimulationConfig,
     SimulationResult,
@@ -34,6 +38,8 @@ from common import (
     DOWNLOAD_DISTANCE_MATRIX_CSV,
     DOWNLOAD_RECONSTRUCTED_TREE_NEWICK,
     DOWNLOAD_RECONSTRUCTED_TREE_PNG,
+    DOWNLOAD_CALIBRATED_TREE_NEWICK,
+    DOWNLOAD_CALIBRATED_TREE_PNG,
     DOWNLOAD_OPTIONS,
     DARK_THEME,
     dark_theme_css,
@@ -188,6 +194,8 @@ def download_payload(
     distance_matrix: dict[str, Any] | None = None,
     reconstructed_newick: str | None = None,
     reconstructed_dot: str | None = None,
+    calibrated_newick: str | None = None,
+    calibrated_dot: str | None = None,
 ) -> tuple[str | bytes, str, str]:
     """Return data, extension, and MIME type for one download option.
 
@@ -199,6 +207,8 @@ def download_payload(
     :param distance_matrix: Calculated distance matrix payload, when available.
     :param reconstructed_newick: Reconstructed Newick text, when available.
     :param reconstructed_dot: Reconstructed tree DOT source, when available.
+    :param calibrated_newick: Calibrated Newick text, when available.
+    :param calibrated_dot: Calibrated tree DOT source, when available.
     :return: Tuple of download data, filename extension, and MIME type.
     """
     # Centralize option handling so the UI and tests share one source of truth.
@@ -228,6 +238,14 @@ def download_payload(
             raise ValueError("You must reconstruct a tree before downloading it.")
         # Render the same DOT source displayed in the reconstruction results tab.
         return tree_png_bytes(reconstructed_dot), "png", "image/png"
+    if selection == DOWNLOAD_CALIBRATED_TREE_NEWICK:
+        if calibrated_newick is None:
+            raise ValueError("You must calibrate a tree before downloading it.")
+        return calibrated_newick.rstrip("\n") + "\n", "newick", "text/plain"
+    if selection == DOWNLOAD_CALIBRATED_TREE_PNG:
+        if calibrated_dot is None:
+            raise ValueError("You must calibrate a tree before downloading it.")
+        return tree_png_bytes(calibrated_dot), "png", "image/png"
     raise ValueError(f"Unknown download selection: {selection}")
 
 
@@ -264,7 +282,7 @@ def render_app() -> None:
 
     stage = st.segmented_control(
         "Workflow",
-        options=("Simulation", "Distance Matrix", "Reconstruction", "Downloads"),
+        options=("Simulation", "Distance Matrix", "Reconstruction", "Calibration", "Downloads"),
         default="Simulation",
         key="strict_workflow_stage",
         label_visibility="collapsed",
@@ -328,8 +346,10 @@ def render_app() -> None:
                 "strict_reconstruction_dot",
                 "strict_reconstruction_newick",
                 "strict_reconstruction_error",
+                "strict_reconstruction_algorithm",
             ):
                 st.session_state.pop(key, None)
+            clear_calibration_state(st.session_state, "strict")
 
     result: SimulationResult = st.session_state.result
     summary = summarize_result(result)
@@ -374,6 +394,7 @@ def render_app() -> None:
             reconstruct = st.button("Reconstruct Tree", type="primary", width="stretch")
 
         if reconstruct:
+            clear_calibration_state(st.session_state, "strict")
             matrix_payload = st.session_state.get("strict_distance_matrix")
             if matrix_payload is None:
                 st.warning("Calculate a distance matrix before reconstructing a tree.")
@@ -384,6 +405,7 @@ def render_app() -> None:
                     st.session_state["strict_reconstruction_error"] = str(error)
                     st.session_state.pop("strict_reconstruction_dot", None)
                     st.session_state.pop("strict_reconstruction_newick", None)
+                    st.session_state.pop("strict_reconstruction_algorithm", None)
                 else:
                     st.session_state.pop("strict_reconstruction_error", None)
                     st.session_state["strict_reconstruction_dot"] = reconstructed_tree_to_dot(
@@ -393,6 +415,10 @@ def render_app() -> None:
                     )
                     st.session_state["strict_reconstruction_newick"] = (
                         reconstructed_tree_newick(reconstructed)
+                    )
+                    # Store the compact algorithm identifier used in download stems.
+                    st.session_state["strict_reconstruction_algorithm"] = (
+                        "upgma" if algorithm == "UPGMA" else "nj"
                     )
 
         st.subheader("Reconstructed Phylogeny")
@@ -405,6 +431,12 @@ def render_app() -> None:
         else:
             st.info("Calculate a distance matrix, then reconstruct a tree.")
 
+    elif stage == "Calibration":
+        render_calibration_tab(
+            st.session_state.get("strict_reconstruction_newick"),
+            "strict",
+        )
+
     else:
         st.subheader("Downloads")
         selection = st.selectbox(
@@ -413,9 +445,15 @@ def render_app() -> None:
             key="strict_workflow_download_selection",
         )
         default_stem = default_download_stem(
-            selection, st.session_state.get("strict_distance_matrix")
+            selection,
+            st.session_state.get("strict_distance_matrix"),
+            st.session_state.get("strict_reconstruction_algorithm"),
         )
-        stem_input = st.text_input("File stem", value=default_stem)
+        stem_input = st.text_input(
+            "File stem",
+            value=default_stem,
+            key=f"strict_download_stem_{selection}_{default_stem}",
+        )
         stem, stem_error = validate_download_stem(stem_input)
         try:
             data, extension, mime = download_payload(
@@ -427,6 +465,8 @@ def render_app() -> None:
                 distance_matrix=st.session_state.get("strict_distance_matrix"),
                 reconstructed_newick=st.session_state.get("strict_reconstruction_newick"),
                 reconstructed_dot=st.session_state.get("strict_reconstruction_dot"),
+                calibrated_newick=st.session_state.get("strict_calibration_newick"),
+                calibrated_dot=st.session_state.get("strict_calibration_dot"),
             )
         except (ValueError, RuntimeError, subprocess.CalledProcessError) as error:
             st.warning(str(error))

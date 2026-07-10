@@ -46,6 +46,8 @@ stem=${stem%.*}
 output_folder="$PROJECT_ROOT/data/output/$stem"
 terminal_sequences="$output_folder/terminal_sequences.fasta"
 original_tree="$output_folder/true_tree.newick"
+path_and_stem="${1%.*}"
+calibration_config="${path_and_stem}_calibration.json"
 
 # Simulate the sequences and generate the terminal sequence file
 python -m "${model}clock" --config "$1"
@@ -65,5 +67,12 @@ for distance in "${DISTANCE_TYPES[@]}"; do
             --source "$original_tree" \
             --reconstructed "$reconstructed_tree" \
             --output "$comparison_image"
+
+        # Calibrate the tree
+        calibrated_tree="$output_folder/${algorithm}_${distance}_calibrated"
+        python -m treecalibration \
+            --input "$reconstructed_tree" \
+            --calibration "$calibration_config" \
+            --output "$calibrated_tree"
     done
 done

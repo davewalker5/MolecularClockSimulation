@@ -8,6 +8,7 @@ from common.graphviz import dot_escape as _dot_escape
 
 from phylogeny.neighbor_joining import neighbor_joining
 from phylogeny.upgma import Cluster, to_newick, upgma
+from treecomparison.comparison import NewickNode
 
 
 def reconstruct_upgma_tree(matrix_payload: dict[str, Any]) -> Cluster:
@@ -84,6 +85,50 @@ def reconstructed_tree_newick(root: Cluster) -> str:
     :return: Newick tree ending with a semicolon.
     """
     return to_newick(root)
+
+
+def calibrated_tree_to_dot(
+    root: NewickNode,
+    *,
+    graph_name: str,
+    colors: dict[str, str],
+) -> str:
+    """Render a calibrated Newick tree using explorer reconstruction styling.
+
+    :param root: Root of the calibrated Newick node tree.
+    :param graph_name: DOT graph identifier.
+    :param colors: Theme color mapping used by the explorers.
+    :return: DOT source suitable for Streamlit display and PNG export.
+    """
+    nodes = root.walk()
+    identifiers = {id(node): f"node_{index}" for index, node in enumerate(nodes)}
+    # Match reconstructed-tree layout and colors so workflow stages feel continuous.
+    lines = [
+        f"digraph {graph_name} {{",
+        f"  graph [rankdir=LR, bgcolor=\"{colors['page_bg']}\", margin=0.08];",
+        "  node [shape=box, style=\"rounded,filled\", "
+        f"fillcolor=\"{colors['surface_elevated']}\", "
+        f"color=\"{colors['border_strong']}\", "
+        f"fontcolor=\"{colors['text']}\", "
+        "fontname=\"Helvetica\", fontsize=11];",
+        f"  edge [color=\"{colors['text_subtle']}\", "
+        f"fontcolor=\"{colors['text_muted_strong']}\", "
+        "fontname=\"Helvetica\", fontsize=10];",
+    ]
+    for node in nodes:
+        node_id = identifiers[id(node)]
+        # Reconstructed trees call unnamed internal nodes clusters; retain named labels.
+        label = node.name if node.name is not None else "cluster"
+        lines.append(f'  "{node_id}" [label="{_dot_escape(label)}"];')
+        for child in node.children:
+            child_id = identifiers[id(child)]
+            # Calibrated branches are expressed in million years.
+            length = "" if child.branch_length is None else f"{child.branch_length:.4g}"
+            lines.append(
+                f'  "{node_id}" -> "{child_id}" [label="{length}"];'
+            )
+    lines.append("}")
+    return "\n".join(lines)
 
 
 def _walk_clusters(root: Cluster) -> list[Cluster]:

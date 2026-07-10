@@ -24,6 +24,8 @@ from common import (
     DOWNLOAD_DISTANCE_MATRIX_CSV,
     DOWNLOAD_RECONSTRUCTED_TREE_NEWICK,
     DOWNLOAD_RECONSTRUCTED_TREE_PNG,
+    DOWNLOAD_CALIBRATED_TREE_NEWICK,
+    DOWNLOAD_CALIBRATED_TREE_PNG,
     DARK_THEME,
     dark_theme_css,
     default_download_stem,
@@ -158,8 +160,6 @@ def test_download_stem_validation_builds_expected_filenames():
         (DOWNLOAD_TRUE_TREE_NEWICK, "true_tree"),
         (DOWNLOAD_TRUE_TREE_PNG, "true_tree"),
         (DOWNLOAD_SIMULATION_METADATA, "simulation_metadata"),
-        (DOWNLOAD_RECONSTRUCTED_TREE_NEWICK, "reconstructed_tree"),
-        (DOWNLOAD_RECONSTRUCTED_TREE_PNG, "reconstructed_tree"),
     ],
 )
 def test_default_download_stem_for_fixed_downloads(selection, expected_stem):
@@ -188,6 +188,38 @@ def test_default_distance_matrix_stem_uses_calculated_method(selection):
     # Read the method from the current payload shared by analysis and downloads.
     assert default_download_stem(selection, matrix) == "distance_matrix_hky85"
     assert default_download_stem(selection) == "distance_matrix"
+
+
+@pytest.mark.parametrize(
+    "selection",
+    [DOWNLOAD_CALIBRATED_TREE_NEWICK, DOWNLOAD_CALIBRATED_TREE_PNG],
+)
+def test_default_calibrated_tree_stem_uses_distance_method(selection):
+    """Confirm calibrated exports identify their upstream distance method.
+
+    :param selection: Calibrated tree download option under test.
+    :return: None.
+    """
+    matrix = {"distance_metric": "hky85"}
+
+    assert default_download_stem(selection, matrix, "nj") == "calibrated_tree_hky85_nj"
+    assert default_download_stem(selection) == "calibrated_tree"
+
+
+@pytest.mark.parametrize(
+    "selection",
+    [DOWNLOAD_RECONSTRUCTED_TREE_NEWICK, DOWNLOAD_RECONSTRUCTED_TREE_PNG],
+)
+def test_default_reconstructed_tree_stem_uses_distance_and_algorithm(selection):
+    """Confirm reconstructed exports identify both upstream methods.
+
+    :param selection: Reconstructed tree download option under test.
+    :return: None.
+    """
+    matrix = {"distance_metric": "jc69"}
+
+    assert default_download_stem(selection, matrix, "upgma") == "reconstructed_tree_jc69_upgma"
+    assert default_download_stem(selection) == "reconstructed_tree"
 
 
 @pytest.mark.parametrize(
@@ -341,6 +373,39 @@ def test_reconstructed_tree_download_payload(selection, extension, mime):
         assert data.startswith(b"\x89PNG\r\n\x1a\n")
     else:
         assert data == "(A:1,B:1);\n"
+
+
+@pytest.mark.parametrize(
+    "selection,extension,mime",
+    [
+        (DOWNLOAD_CALIBRATED_TREE_NEWICK, "newick", "text/plain"),
+        (DOWNLOAD_CALIBRATED_TREE_PNG, "png", "image/png"),
+    ],
+)
+def test_calibrated_tree_download_payload(selection, extension, mime):
+    """Confirm completed calibrations export as Newick and PNG.
+
+    :param selection: Calibrated tree download option under test.
+    :param extension: Expected filename extension.
+    :param mime: Expected response MIME type.
+    :return: None.
+    """
+    result = run_simulation(make_config(sequence_length=20, number_of_taxa=4))
+    data, actual_extension, actual_mime = download_payload(
+        selection,
+        result,
+        fasta=fasta_text(result),
+        metadata=metadata_json(result),
+        tree_dot=tree_to_dot(result.root),
+        calibrated_newick="(A:10,B:10);",
+        calibrated_dot="digraph calibrated { A -> B; }",
+    )
+
+    assert (actual_extension, actual_mime) == (extension, mime)
+    if selection == DOWNLOAD_CALIBRATED_TREE_PNG:
+        assert data.startswith(b"\x89PNG\r\n\x1a\n")
+    else:
+        assert data == "(A:10,B:10);\n"
 
 
 def test_distance_matrix_download_serializes_json_payload():
