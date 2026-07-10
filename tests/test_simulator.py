@@ -160,8 +160,6 @@ def test_download_stem_validation_builds_expected_filenames():
         (DOWNLOAD_TRUE_TREE_NEWICK, "true_tree"),
         (DOWNLOAD_TRUE_TREE_PNG, "true_tree"),
         (DOWNLOAD_SIMULATION_METADATA, "simulation_metadata"),
-        (DOWNLOAD_RECONSTRUCTED_TREE_NEWICK, "reconstructed_tree"),
-        (DOWNLOAD_RECONSTRUCTED_TREE_PNG, "reconstructed_tree"),
     ],
 )
 def test_default_download_stem_for_fixed_downloads(selection, expected_stem):
@@ -204,8 +202,24 @@ def test_default_calibrated_tree_stem_uses_distance_method(selection):
     """
     matrix = {"distance_metric": "hky85"}
 
-    assert default_download_stem(selection, matrix) == "calibrated_tree_hky85"
+    assert default_download_stem(selection, matrix, "nj") == "calibrated_tree_hky85_nj"
     assert default_download_stem(selection) == "calibrated_tree"
+
+
+@pytest.mark.parametrize(
+    "selection",
+    [DOWNLOAD_RECONSTRUCTED_TREE_NEWICK, DOWNLOAD_RECONSTRUCTED_TREE_PNG],
+)
+def test_default_reconstructed_tree_stem_uses_distance_and_algorithm(selection):
+    """Confirm reconstructed exports identify both upstream methods.
+
+    :param selection: Reconstructed tree download option under test.
+    :return: None.
+    """
+    matrix = {"distance_metric": "jc69"}
+
+    assert default_download_stem(selection, matrix, "upgma") == "reconstructed_tree_jc69_upgma"
+    assert default_download_stem(selection) == "reconstructed_tree"
 
 
 @pytest.mark.parametrize(

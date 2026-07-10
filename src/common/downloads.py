@@ -23,11 +23,13 @@ from common.constants import (
 def default_download_stem(
     selection: str,
     distance_matrix: dict[str, Any] | None = None,
+    reconstruction_algorithm: str | None = None,
 ) -> str:
     """Return the default file stem for a download selection.
 
     :param selection: User-selected download option.
     :param distance_matrix: Current calculated distance matrix, when available.
+    :param reconstruction_algorithm: Algorithm used for the current reconstructed tree.
     :return: Default filename stem without a path or extension.
     """
     # Most exports have a fixed descriptive stem shared by both explorer variants.
@@ -36,8 +38,6 @@ def default_download_stem(
         DOWNLOAD_TRUE_TREE_NEWICK: "true_tree",
         DOWNLOAD_TRUE_TREE_PNG: "true_tree",
         DOWNLOAD_SIMULATION_METADATA: "simulation_metadata",
-        DOWNLOAD_RECONSTRUCTED_TREE_NEWICK: "reconstructed_tree",
-        DOWNLOAD_RECONSTRUCTED_TREE_PNG: "reconstructed_tree",
     }
     if selection in fixed_stems:
         return fixed_stems[selection]
@@ -50,7 +50,14 @@ def default_download_stem(
     if selection in {DOWNLOAD_CALIBRATED_TREE_NEWICK, DOWNLOAD_CALIBRATED_TREE_PNG}:
         # Calibration inherits the distance method used to reconstruct its input tree.
         method = distance_matrix.get("distance_metric") if distance_matrix else None
-        return f"calibrated_tree_{method}" if method else "calibrated_tree"
+        suffix = "_".join(part for part in (method, reconstruction_algorithm) if part)
+        return f"calibrated_tree_{suffix}" if suffix else "calibrated_tree"
+
+    if selection in {DOWNLOAD_RECONSTRUCTED_TREE_NEWICK, DOWNLOAD_RECONSTRUCTED_TREE_PNG}:
+        # A reconstructed tree is identified by both stages that produced it.
+        method = distance_matrix.get("distance_metric") if distance_matrix else None
+        suffix = "_".join(part for part in (method, reconstruction_algorithm) if part)
+        return f"reconstructed_tree_{suffix}" if suffix else "reconstructed_tree"
 
     raise ValueError(f"Unknown download selection: {selection}")
 

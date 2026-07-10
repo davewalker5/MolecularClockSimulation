@@ -346,6 +346,7 @@ def render_app() -> None:
                 "strict_reconstruction_dot",
                 "strict_reconstruction_newick",
                 "strict_reconstruction_error",
+                "strict_reconstruction_algorithm",
             ):
                 st.session_state.pop(key, None)
             clear_calibration_state(st.session_state, "strict")
@@ -404,6 +405,7 @@ def render_app() -> None:
                     st.session_state["strict_reconstruction_error"] = str(error)
                     st.session_state.pop("strict_reconstruction_dot", None)
                     st.session_state.pop("strict_reconstruction_newick", None)
+                    st.session_state.pop("strict_reconstruction_algorithm", None)
                 else:
                     st.session_state.pop("strict_reconstruction_error", None)
                     st.session_state["strict_reconstruction_dot"] = reconstructed_tree_to_dot(
@@ -413,6 +415,10 @@ def render_app() -> None:
                     )
                     st.session_state["strict_reconstruction_newick"] = (
                         reconstructed_tree_newick(reconstructed)
+                    )
+                    # Store the compact algorithm identifier used in download stems.
+                    st.session_state["strict_reconstruction_algorithm"] = (
+                        "upgma" if algorithm == "UPGMA" else "nj"
                     )
 
         st.subheader("Reconstructed Phylogeny")
@@ -439,12 +445,14 @@ def render_app() -> None:
             key="strict_workflow_download_selection",
         )
         default_stem = default_download_stem(
-            selection, st.session_state.get("strict_distance_matrix")
+            selection,
+            st.session_state.get("strict_distance_matrix"),
+            st.session_state.get("strict_reconstruction_algorithm"),
         )
         stem_input = st.text_input(
             "File stem",
             value=default_stem,
-            key=f"strict_download_stem_{selection}",
+            key=f"strict_download_stem_{selection}_{default_stem}",
         )
         stem, stem_error = validate_download_stem(stem_input)
         try:

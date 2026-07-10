@@ -709,6 +709,7 @@ def render_app() -> None:
                 "relaxed_reconstruction_dot",
                 "relaxed_reconstruction_newick",
                 "relaxed_reconstruction_error",
+                "relaxed_reconstruction_algorithm",
             ):
                 st.session_state.pop(key, None)
             clear_calibration_state(st.session_state, "relaxed")
@@ -767,6 +768,7 @@ def render_app() -> None:
                     st.session_state["relaxed_reconstruction_error"] = str(error)
                     st.session_state.pop("relaxed_reconstruction_dot", None)
                     st.session_state.pop("relaxed_reconstruction_newick", None)
+                    st.session_state.pop("relaxed_reconstruction_algorithm", None)
                 else:
                     st.session_state.pop("relaxed_reconstruction_error", None)
                     st.session_state["relaxed_reconstruction_dot"] = reconstructed_tree_to_dot(
@@ -776,6 +778,10 @@ def render_app() -> None:
                     )
                     st.session_state["relaxed_reconstruction_newick"] = (
                         reconstructed_tree_newick(reconstructed)
+                    )
+                    # Store the compact algorithm identifier used in download stems.
+                    st.session_state["relaxed_reconstruction_algorithm"] = (
+                        "upgma" if algorithm == "UPGMA" else "nj"
                     )
 
         st.subheader("Reconstructed Phylogeny")
@@ -802,12 +808,14 @@ def render_app() -> None:
             key="relaxed_workflow_download_selection",
         )
         default_stem = default_download_stem(
-            selection, st.session_state.get("relaxed_distance_matrix")
+            selection,
+            st.session_state.get("relaxed_distance_matrix"),
+            st.session_state.get("relaxed_reconstruction_algorithm"),
         )
         stem_input = st.text_input(
             "File stem",
             value=default_stem,
-            key=f"relaxed_download_stem_{selection}",
+            key=f"relaxed_download_stem_{selection}_{default_stem}",
         )
         stem, stem_error = validate_download_stem(stem_input)
         try:
