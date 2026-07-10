@@ -1,0 +1,8 @@
+services:
+  strictclockexplorer:
+    container_name: strictclockexplorer
+    image: davewalker5/strictclockexplorer:latest
+    platform: linux/amd64
+    restart: always
+    ports:
+      - "8101:8501"

@@ -1,0 +1,8 @@
+services:
+  relaxedclockexplorer:
+    container_name: relaxedclockexplorer
+    image: davewalker5/relaxedclockexplorer:latest
+    platform: linux/amd64
+    restart: always
+    ports:
+      - "8096:8501"
