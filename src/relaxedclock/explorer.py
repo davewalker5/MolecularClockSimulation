@@ -46,7 +46,6 @@ from common import (
     format_fasta,
     metadata_json,
     render_dot_png,
-    synchronize_download_state,
     validate_download_stem,
 )
 
@@ -578,21 +577,16 @@ def main() -> int:
         "run",
         __file__,
         "--server.headless=true",
+        *sys.argv[1:],
     ]
     return subprocess.call(command)
 
 
 def render_app() -> None:
-    """Render the Streamlit application.
-
-    :return: None.
-    """
-    # Import Streamlit lazily so helper functions remain testable without app startup.
+    """Render the relaxed explorer as one explicit, conditionally rendered workflow."""
     import streamlit as st
 
     defaults = ExplorerDefaults()
-
-    # Configure the page before emitting any visible Streamlit elements.
     st.set_page_config(
         page_title="Relaxed Molecular Clock Explorer",
         page_icon="",
@@ -601,372 +595,219 @@ def render_app() -> None:
     st.markdown(dark_theme_css(), unsafe_allow_html=True)
     st.title("Relaxed Molecular Clock Explorer")
 
-    sidebar_tab_key = "relaxed_sidebar_tab"
-    main_tab_key = "relaxed_main_tab"
-    reconstruction_warning_key = "relaxed_reconstruction_warning"
-    reconstruction_error_key = "relaxed_reconstruction_error"
-    reconstruction_dot_key = "relaxed_reconstruction_dot"
-    reconstruction_newick_key = "relaxed_reconstruction_newick"
-    download_selection_key = "relaxed_download_selection"
-    download_stem_key = "relaxed_download_stem"
-    download_unavailable_key = "relaxed_download_unavailable"
-    main_tab_labels = [
-        "FASTA Sequences",
-        "Newick Output",
-        "Distance Analysis",
-        "Reconstruction",
-        "Downloads",
-    ]
+    stage = st.segmented_control(
+        "Workflow",
+        options=("Simulation", "Distance Matrix", "Reconstruction", "Downloads"),
+        default="Simulation",
+        key="relaxed_workflow_stage",
+        label_visibility="collapsed",
+        width="stretch",
+    )
 
-    def sync_main_tab_from_sidebar() -> None:
-        """Select the matching main output tab when the sidebar tab changes.
+    if "relaxed_result" not in st.session_state:
+        initial_config = build_config(
+            sequence_length=defaults.sequence_length,
+            max_depth=defaults.max_depth,
+            random_seed=defaults.random_seed,
+            branch_duration=defaults.branch_duration,
+            duration_jitter=defaults.duration_jitter,
+            root_rate=defaults.root_rate,
+            rate_sigma=defaults.rate_sigma,
+            minimum_rate=defaults.minimum_rate,
+            maximum_rate=defaults.maximum_rate,
+            newick_branch_lengths=defaults.newick_branch_lengths,
+            allow_back_mutation=defaults.allow_back_mutation,
+        )
+        st.session_state.relaxed_result = run_simulation(initial_config)
 
-        :return: None.
-        """
-        # Read the sidebar's persisted selection before mapping it to an output tab.
-        sidebar_tab = st.session_state.get(sidebar_tab_key)
-        if sidebar_tab == "Simulation":
-            st.session_state[main_tab_key] = "FASTA Sequences"
-        elif sidebar_tab == "Distance":
-            st.session_state[main_tab_key] = "Distance Analysis"
-        elif sidebar_tab == "Reconstruction":
-            st.session_state[main_tab_key] = "Reconstruction"
+    if stage == "Simulation":
+        with st.sidebar:
+            st.header("Simulation")
+            max_depth = st.slider("Tree depth", 1, 6, defaults.max_depth)
+            sequence_length = st.slider(
+                "Sequence length", 10, 5000, defaults.sequence_length, step=10
+            )
+            branch_duration = st.number_input(
+                "Branch duration", 0.01, 100.0, defaults.branch_duration, step=0.1
+            )
+            duration_jitter = st.number_input(
+                "Duration jitter",
+                0.0,
+                max(0.0, branch_duration - 0.01),
+                min(defaults.duration_jitter, max(0.0, branch_duration - 0.01)),
+                step=0.01,
+            )
+            root_rate = st.number_input(
+                "Root rate", 0.00001, 10.0, defaults.root_rate, step=0.001, format="%.5f"
+            )
+            rate_sigma = st.number_input(
+                "Rate sigma", 0.0, 5.0, defaults.rate_sigma, step=0.05
+            )
+            minimum_rate = st.number_input(
+                "Minimum rate",
+                0.00001,
+                root_rate,
+                min(defaults.minimum_rate, root_rate),
+                step=0.001,
+                format="%.5f",
+            )
+            maximum_rate = st.number_input(
+                "Maximum rate",
+                root_rate,
+                10.0,
+                max(defaults.maximum_rate, root_rate),
+                step=0.001,
+                format="%.5f",
+            )
+            newick_branch_lengths = st.selectbox(
+                "Newick branch lengths", options=("genetic_change", "time", "rate")
+            )
+            allow_back_mutation = st.checkbox(
+                "Allow back mutation", value=defaults.allow_back_mutation
+            )
+            random_seed = st.number_input(
+                "Random seed", 0, 2_147_483_647, defaults.random_seed, step=1
+            )
+            generate = st.button("Generate", type="primary", width="stretch")
 
-    def reset_download_stem() -> None:
-        """Reset the editable file stem after the download selection changes.
-
-        :return: None.
-        """
-        # Selection changes intentionally overwrite any user-edited file stem.
-        synchronize_download_state(
-            st.session_state,
-            selection_key=download_selection_key,
-            stem_key=download_stem_key,
-            unavailable_key=download_unavailable_key,
-            distance_matrix_key="relaxed_distance_matrix",
-            reconstructed_newick_key=reconstruction_newick_key,
-            reconstructed_dot_key=reconstruction_dot_key,
-            reset_stem=True,
-        )
-
-    def sync_sidebar_tab_from_main() -> None:
-        """Select the matching sidebar tab when the main output tab changes.
-
-        :return: None.
-        """
-        # Map output tabs back to the sidebar section that controls their content.
-        main_tab = st.session_state.get(main_tab_key)
-        if main_tab in {"FASTA Sequences", "Newick Output"}:
-            st.session_state[sidebar_tab_key] = "Simulation"
-        elif main_tab == "Distance Analysis":
-            st.session_state[sidebar_tab_key] = "Distance"
-        elif main_tab == "Reconstruction":
-            st.session_state[sidebar_tab_key] = "Reconstruction"
-
-    with st.sidebar:
-        simulation_sidebar_tab, distance_sidebar_tab, reconstruction_sidebar_tab = st.tabs(
-            ["Simulation", "Distance", "Reconstruction"],
-            key=sidebar_tab_key,
-            on_change=sync_main_tab_from_sidebar,
-        )
-
-    with simulation_sidebar_tab:
-        st.header("Simulation")
-        st.subheader("Tree")
-        max_depth = st.slider(
-            "Tree depth",
-            min_value=1,
-            max_value=6,
-            value=defaults.max_depth,
-            step=1,
-            help="A full binary tree produces 2^depth terminal taxa.",
-        )
-        branch_duration = st.number_input(
-            "Branch duration",
-            min_value=0.01,
-            max_value=100.0,
-            value=defaults.branch_duration,
-            step=0.1,
-            format="%.2f",
-        )
-        duration_jitter = st.number_input(
-            "Duration jitter",
-            min_value=0.0,
-            max_value=max(0.0, branch_duration - 0.01),
-            value=min(defaults.duration_jitter, max(0.0, branch_duration - 0.01)),
-            step=0.01,
-            format="%.2f",
-        )
-        st.divider()
-
-        st.subheader("Sequence")
-        sequence_length = st.slider(
-            "Sequence length",
-            min_value=10,
-            max_value=5000,
-            value=defaults.sequence_length,
-            step=10,
-        )
-        st.divider()
-
-        st.subheader("Clock")
-        root_rate = st.number_input(
-            "Root rate",
-            min_value=0.00001,
-            max_value=10.0,
-            value=defaults.root_rate,
-            step=0.001,
-            format="%.5f",
-        )
-        rate_sigma = st.number_input(
-            "Rate sigma",
-            min_value=0.0,
-            max_value=5.0,
-            value=defaults.rate_sigma,
-            step=0.05,
-            format="%.2f",
-        )
-        minimum_rate = st.number_input(
-            "Minimum rate",
-            min_value=0.00001,
-            max_value=root_rate,
-            value=min(defaults.minimum_rate, root_rate),
-            step=0.001,
-            format="%.5f",
-        )
-        maximum_rate = st.number_input(
-            "Maximum rate",
-            min_value=root_rate,
-            max_value=10.0,
-            value=max(defaults.maximum_rate, root_rate),
-            step=0.001,
-            format="%.5f",
-        )
-        st.divider()
-
-        st.subheader("Outputs")
-        newick_branch_lengths = st.selectbox(
-            "Newick branch lengths",
-            options=("genetic_change", "time", "rate"),
-            index=("genetic_change", "time", "rate").index(defaults.newick_branch_lengths),
-        )
-        st.divider()
-
-        st.subheader("Mutation")
-        allow_back_mutation = st.checkbox(
-            "Allow back mutation",
-            value=defaults.allow_back_mutation,
-        )
-        st.divider()
-
-        st.subheader("Reproducibility")
-        random_seed = st.number_input(
-            "Random seed",
-            min_value=0,
-            max_value=2_147_483_647,
-            value=defaults.random_seed,
-            step=1,
-        )
-        generate = st.button("Generate", type="primary", width="stretch")
-
-    # Store the latest result in session state so tab changes do not rerun simulation.
-    if "relaxed_result" not in st.session_state or generate:
-        config = build_config(
-            sequence_length=sequence_length,
-            max_depth=max_depth,
-            random_seed=int(random_seed),
-            branch_duration=branch_duration,
-            duration_jitter=duration_jitter,
-            root_rate=root_rate,
-            rate_sigma=rate_sigma,
-            minimum_rate=minimum_rate,
-            maximum_rate=maximum_rate,
-            newick_branch_lengths=newick_branch_lengths,
-            allow_back_mutation=allow_back_mutation,
-        )
-        st.session_state.relaxed_result = run_simulation(config)
+        if generate:
+            config = build_config(
+                sequence_length=sequence_length,
+                max_depth=max_depth,
+                random_seed=int(random_seed),
+                branch_duration=branch_duration,
+                duration_jitter=duration_jitter,
+                root_rate=root_rate,
+                rate_sigma=rate_sigma,
+                minimum_rate=minimum_rate,
+                maximum_rate=maximum_rate,
+                newick_branch_lengths=newick_branch_lengths,
+                allow_back_mutation=allow_back_mutation,
+            )
+            st.session_state.relaxed_result = run_simulation(config)
+            for key in (
+                "relaxed_distance_matrix",
+                "relaxed_distance_model",
+                "relaxed_reconstruction_dot",
+                "relaxed_reconstruction_newick",
+                "relaxed_reconstruction_error",
+            ):
+                st.session_state.pop(key, None)
 
     result: RelaxedClockResult = st.session_state.relaxed_result
     summary = summarize_result(result)
     fasta = fasta_text(result)
     metadata = metadata_json(result)
     branch_lengths = result.config.outputs.newick_branch_lengths
-    tree_dot = tree_to_dot(result.root, branch_lengths)
-    tree_svg = tree_to_svg(result.root, branch_lengths)
 
-    with distance_sidebar_tab:
-        st.header("Distance")
-        render_distance_analysis_controls(
-            result.terminal_sequences,
-            state_key_prefix="relaxed",
-        )
-
-    with reconstruction_sidebar_tab:
-        st.header("Reconstruction")
-        st.selectbox(
-            "Algorithm",
-            options=("UPGMA", "Neighbor Joining"),
-            key="relaxed_reconstruction_algorithm",
-        )
-        if st.button("Reconstruct Tree", key="relaxed_reconstruct_tree", width="stretch"):
-            st.session_state[main_tab_key] = "Reconstruction"
-            matrix_payload = st.session_state.get("relaxed_distance_matrix")
-            if matrix_payload is None:
-                st.session_state[reconstruction_warning_key] = True
-                st.session_state.pop(reconstruction_error_key, None)
-                st.session_state.pop(reconstruction_dot_key, None)
-                st.session_state.pop(reconstruction_newick_key, None)
-            else:
-                try:
-                    reconstructed_tree = reconstruct_tree(
-                        matrix_payload,
-                        method=st.session_state["relaxed_reconstruction_algorithm"],
-                    )
-                except ValueError as error:
-                    st.session_state[reconstruction_warning_key] = False
-                    st.session_state[reconstruction_error_key] = str(error)
-                    st.session_state.pop(reconstruction_dot_key, None)
-                    st.session_state.pop(reconstruction_newick_key, None)
-                else:
-                    st.session_state[reconstruction_warning_key] = False
-                    st.session_state.pop(reconstruction_error_key, None)
-                    st.session_state[reconstruction_dot_key] = reconstructed_tree_to_dot(
-                        reconstructed_tree,
-                        graph_name="relaxed_reconstructed_tree",
-                        colors=DARK_THEME,
-                    )
-                    st.session_state[reconstruction_newick_key] = reconstructed_tree_newick(
-                        reconstructed_tree
-                    )
-
-    # The tree is the primary visual output for this explorer release.
-    st.subheader("Phylogenetic Tree")
-    st.markdown(tree_svg, unsafe_allow_html=True)
-
-    st.subheader("Simulation Summary")
-    metric_columns = st.columns(4)
-    metric_columns[0].metric("Taxa", summary["terminal_taxa"])
-    metric_columns[1].metric("Sequence length", summary["sequence_length"])
-    metric_columns[2].metric("Mutations", summary["total_observed_substitutions"])
-    metric_columns[3].metric("Seed", summary["random_seed"])
-    rate_columns = st.columns(4)
-    rate_columns[0].metric("Mean rate", f"{summary['mean_lineage_rate']:.5g}")
-    rate_columns[1].metric("Min rate", f"{summary['minimum_lineage_rate']:.5g}")
-    rate_columns[2].metric("Max rate", f"{summary['maximum_lineage_rate']:.5g}")
-    rate_columns[3].metric("Expected substitutions", f"{summary['total_expected_substitutions']:.4g}")
-    st.caption(
-        f"Tree depth: {summary['max_depth']} | "
-        f"branch duration: {summary['branch_duration']} | "
-        f"duration jitter: {summary['duration_jitter']} | "
-        f"root rate: {summary['root_rate']} | "
-        f"rate sigma: {summary['rate_sigma']} | "
-        f"Newick branch lengths: {html.escape(summary['newick_branch_lengths'])}"
-    )
-
-    sequence_tab, newick_tab, distance_tab, reconstruction_tab, download_tab = st.tabs(
-        main_tab_labels,
-        key=main_tab_key,
-        on_change=sync_sidebar_tab_from_main,
-    )
-    with sequence_tab:
+    if stage == "Simulation":
+        st.subheader("Simulated Phylogeny")
+        st.markdown(tree_to_svg(result.root, branch_lengths), unsafe_allow_html=True)
+        columns = st.columns(4)
+        columns[0].metric("Taxa", summary["terminal_taxa"])
+        columns[1].metric("Sequence length", summary["sequence_length"])
+        columns[2].metric("Mutations", summary["total_observed_substitutions"])
+        columns[3].metric("Seed", summary["random_seed"])
+        st.subheader("Terminal Sequences")
         st.code(fasta, language="text")
-    with newick_tab:
-        st.code(result.newick, language="text")
-    with distance_tab:
+        with st.expander("True tree Newick"):
+            st.code(result.newick, language="text")
+
+    elif stage == "Distance Matrix":
+        with st.sidebar:
+            st.header("Distance Matrix")
+            render_distance_analysis_controls(
+                result.terminal_sequences,
+                state_key_prefix="relaxed",
+            )
+        st.subheader("Distance Analysis")
         render_distance_analysis_tab(
             result.terminal_sequences,
             state_key_prefix="relaxed",
         )
-    with reconstruction_tab:
-        if (
-            st.session_state.get(reconstruction_warning_key)
-            and st.session_state.get("relaxed_distance_matrix") is None
-        ):
-            st.warning("You must calculate a distance matrix before reconstructing a tree")
-        elif st.session_state.get(reconstruction_error_key):
-            st.warning(st.session_state[reconstruction_error_key])
-        elif st.session_state.get(reconstruction_dot_key):
-            st.graphviz_chart(st.session_state[reconstruction_dot_key], width="stretch")
+
+    elif stage == "Reconstruction":
+        with st.sidebar:
+            st.header("Reconstruction")
+            algorithm = st.selectbox(
+                "Algorithm",
+                options=("UPGMA", "Neighbor Joining"),
+                key="relaxed_workflow_reconstruction_algorithm",
+            )
+            reconstruct = st.button("Reconstruct Tree", type="primary", width="stretch")
+
+        if reconstruct:
+            matrix_payload = st.session_state.get("relaxed_distance_matrix")
+            if matrix_payload is None:
+                st.warning("Calculate a distance matrix before reconstructing a tree.")
+            else:
+                try:
+                    reconstructed = reconstruct_tree(matrix_payload, method=algorithm)
+                except ValueError as error:
+                    st.session_state["relaxed_reconstruction_error"] = str(error)
+                    st.session_state.pop("relaxed_reconstruction_dot", None)
+                    st.session_state.pop("relaxed_reconstruction_newick", None)
+                else:
+                    st.session_state.pop("relaxed_reconstruction_error", None)
+                    st.session_state["relaxed_reconstruction_dot"] = reconstructed_tree_to_dot(
+                        reconstructed,
+                        graph_name="relaxed_reconstructed_tree",
+                        colors=DARK_THEME,
+                    )
+                    st.session_state["relaxed_reconstruction_newick"] = (
+                        reconstructed_tree_newick(reconstructed)
+                    )
+
+        st.subheader("Reconstructed Phylogeny")
+        if st.session_state.get("relaxed_reconstruction_error"):
+            st.warning(st.session_state["relaxed_reconstruction_error"])
+        elif st.session_state.get("relaxed_reconstruction_dot"):
+            st.graphviz_chart(st.session_state["relaxed_reconstruction_dot"], width="stretch")
             with st.expander("Reconstructed Newick"):
-                st.code(st.session_state[reconstruction_newick_key], language="text")
-    with download_tab:
-        # Initialize the editable stem before Streamlit creates its stateful widget.
-        st.session_state.setdefault(
-            download_stem_key,
-            default_download_stem(
-                st.session_state.get(download_selection_key, DOWNLOAD_OPTIONS[0]),
-                st.session_state.get("relaxed_distance_matrix"),
-            ),
-        )
-        download_selection = st.selectbox(
+                st.code(st.session_state["relaxed_reconstruction_newick"], language="text")
+        else:
+            st.info("Calculate a distance matrix, then reconstruct a tree.")
+
+    else:
+        st.subheader("Downloads")
+        selection = st.selectbox(
             "Download",
             options=DOWNLOAD_OPTIONS,
-            key=download_selection_key,
-            on_change=reset_download_stem,
+            key="relaxed_workflow_download_selection",
         )
-        unavailable_warning = synchronize_download_state(
-            st.session_state,
-            selection_key=download_selection_key,
-            stem_key=download_stem_key,
-            unavailable_key=download_unavailable_key,
-            distance_matrix_key="relaxed_distance_matrix",
-            reconstructed_newick_key=reconstruction_newick_key,
-            reconstructed_dot_key=reconstruction_dot_key,
+        default_stem = default_download_stem(
+            selection, st.session_state.get("relaxed_distance_matrix")
         )
-        download_stem_input = st.text_input(
-            "File stem",
-            key=download_stem_key,
-            help="Enter the name to use for downloads, without a path or extension.",
-            disabled=unavailable_warning is not None,
-        )
-        download_stem, download_stem_error = validate_download_stem(download_stem_input)
-        if unavailable_warning:
-            st.warning(unavailable_warning)
-            st.download_button(
-                "Download",
-                data="",
-                file_name="download_unavailable",
-                mime="application/octet-stream",
-                width="stretch",
-                disabled=True,
+        stem_input = st.text_input("File stem", value=default_stem)
+        stem, stem_error = validate_download_stem(stem_input)
+        try:
+            data, extension, mime = download_payload(
+                selection,
+                result,
+                fasta=fasta,
+                metadata=metadata,
+                tree_dot=result.root,
+                branch_lengths=branch_lengths,
+                distance_matrix=st.session_state.get("relaxed_distance_matrix"),
+                reconstructed_newick=st.session_state.get("relaxed_reconstruction_newick"),
+                reconstructed_dot=st.session_state.get("relaxed_reconstruction_dot"),
             )
-        elif download_stem_error:
-            # Keep the button visible but disabled so the required action is clear.
-            st.warning(download_stem_error)
+        except (ValueError, RuntimeError, subprocess.CalledProcessError) as error:
+            st.warning(str(error))
             st.download_button(
-                "Download",
-                data="",
-                file_name="enter_file_stem",
-                mime="application/octet-stream",
-                width="stretch",
-                disabled=True,
+                "Download", data="", file_name="unavailable", disabled=True, width="stretch"
             )
         else:
-            try:
-                # PNG generation can fail when Graphviz is missing or cannot render.
-                download_data, extension, mime = download_payload(
-                    download_selection,
-                    result,
-                    fasta=fasta,
-                    metadata=metadata,
-                    tree_dot=result.root,
-                    branch_lengths=branch_lengths,
-                    distance_matrix=st.session_state.get("relaxed_distance_matrix"),
-                    reconstructed_newick=st.session_state.get(reconstruction_newick_key),
-                    reconstructed_dot=st.session_state.get(reconstruction_dot_key),
-                )
-            except ValueError as error:
-                st.warning(str(error))
-            except (RuntimeError, subprocess.CalledProcessError) as error:
-                st.warning(f"{download_selection} export is unavailable: {error}")
-            else:
-                st.download_button(
-                    "Download",
-                    data=download_data,
-                    file_name=download_filename(download_stem, extension),
-                    mime=mime,
-                    width="stretch",
-                )
+            if stem_error:
+                st.warning(stem_error)
+            st.download_button(
+                "Download",
+                data=data,
+                file_name=download_filename(stem, extension),
+                mime=mime,
+                disabled=stem_error is not None,
+                width="stretch",
+            )
 
 
 if __name__ == "__main__":

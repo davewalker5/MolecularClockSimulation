@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "molecular-clock-simulation"
-version = "1.2.0"
+version = "1.3.0"
 description = "Molecular Clock Simulation"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -17,7 +17,7 @@ dependencies = [
 
 [project.scripts]
 molecular-clock-sim = "strictclock.cli:main"
-molecular-clock-explorer = "strictclock.explorer:main"
+strict-clock-explorer = "strictclock.explorer:main"
 relaxed-clock-sim = "relaxedclock.cli:main"
 relaxed-clock-explorer = "relaxedclock.explorer:main"
 distance-matrix = "distancematrix.cli:main"

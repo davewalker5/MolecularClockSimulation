@@ -10,4 +10,4 @@ RUN apt-get update -y
 RUN pip install --no-cache-dir /opt/strictclockexplorer/molecular_clock_simulation-${APPLICATION_VERSION}-py3-none-any.whl
 
 ENTRYPOINT [ "strict-clock-explorer" ]
-CMD ["--server.address=0.0.0.0", "--server.port=8501"]
+CMD ["--server.address=0.0.0.0", "--server.port=8501", "--runner.fastReruns=false"]
