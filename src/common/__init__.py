@@ -11,6 +11,7 @@ from common.constants import (
     DARK_THEME
 )
 
+from common.downloads import default_download_stem
 from common.styling import dark_theme_css
 
 __all__ = [
@@ -24,5 +25,6 @@ __all__ = [
     DOWNLOAD_RECONSTRUCTED_TREE_PNG,
     DOWNLOAD_OPTIONS,
     DARK_THEME,
-    dark_theme_css
+    dark_theme_css,
+    default_download_stem,
 ]

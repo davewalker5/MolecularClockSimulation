@@ -25,7 +25,8 @@ from common import (
     DOWNLOAD_RECONSTRUCTED_TREE_NEWICK,
     DOWNLOAD_RECONSTRUCTED_TREE_PNG,
     DARK_THEME,
-    dark_theme_css
+    dark_theme_css,
+    default_download_stem,
 )
 
 
@@ -147,6 +148,45 @@ def test_download_stem_validation_builds_expected_filenames():
     assert download_filename(stem, "newick") == "example_run.newick"
     assert download_filename(stem, "json") == "example_run.json"
     assert download_filename(stem, "png") == "example_run.png"
+
+
+@pytest.mark.parametrize(
+    "selection,expected_stem",
+    [
+        (DOWNLOAD_TERMINAL_SEQUENCES, "terminal_sequences"),
+        (DOWNLOAD_TRUE_TREE_NEWICK, "true_tree"),
+        (DOWNLOAD_TRUE_TREE_PNG, "true_tree"),
+        (DOWNLOAD_SIMULATION_METADATA, "simulation_metadata"),
+        (DOWNLOAD_RECONSTRUCTED_TREE_NEWICK, "reconstructed_tree"),
+        (DOWNLOAD_RECONSTRUCTED_TREE_PNG, "reconstructed_tree"),
+    ],
+)
+def test_default_download_stem_for_fixed_downloads(selection, expected_stem):
+    """Confirm fixed download types receive their requested default stems.
+
+    :param selection: Download option under test.
+    :param expected_stem: Expected filename stem.
+    :return: None.
+    """
+    # Fixed stems do not depend on any calculated distance matrix state.
+    assert default_download_stem(selection) == expected_stem
+
+
+@pytest.mark.parametrize(
+    "selection",
+    [DOWNLOAD_DISTANCE_MATRIX_JSON, DOWNLOAD_DISTANCE_MATRIX_CSV],
+)
+def test_default_distance_matrix_stem_uses_calculated_method(selection):
+    """Confirm distance matrix defaults identify the method used to build them.
+
+    :param selection: Distance matrix download option under test.
+    :return: None.
+    """
+    matrix = {"distance_metric": "hky85"}
+
+    # Read the method from the current payload shared by analysis and downloads.
+    assert default_download_stem(selection, matrix) == "distance_matrix_hky85"
+    assert default_download_stem(selection) == "distance_matrix"
 
 
 @pytest.mark.parametrize(

@@ -40,7 +40,8 @@ from common import (
     DOWNLOAD_RECONSTRUCTED_TREE_PNG,
     DOWNLOAD_OPTIONS,
     DARK_THEME,
-    dark_theme_css
+    dark_theme_css,
+    default_download_stem,
 )
 
 @dataclass(frozen=True)
@@ -334,6 +335,8 @@ def render_app() -> None:
     reconstruction_error_key = "strict_reconstruction_error"
     reconstruction_dot_key = "strict_reconstruction_dot"
     reconstruction_newick_key = "strict_reconstruction_newick"
+    download_selection_key = "strict_download_selection"
+    download_stem_key = "strict_download_stem"
     main_tab_labels = [
         "FASTA Sequences",
         "Newick Output",
@@ -356,8 +359,22 @@ def render_app() -> None:
         elif sidebar_tab == "Reconstruction":
             st.session_state[main_tab_key] = "Reconstruction"
 
+    def reset_download_stem() -> None:
+        """Reset the editable file stem after the download selection changes.
+
+        :return: None.
+        """
+        # Selection changes intentionally replace any file stem edited by the user.
+        st.session_state[download_stem_key] = default_download_stem(
+            st.session_state[download_selection_key],
+            st.session_state.get("strict_distance_matrix"),
+        )
     def sync_sidebar_tab_from_main() -> None:
-        """Select the matching sidebar tab when the main output tab changes."""
+        """Select the matching sidebar tab when the main output tab changes.
+
+        :return: None.
+        """
+        # Map output tabs back to the sidebar section that controls their content.
         main_tab = st.session_state.get(main_tab_key)
         if main_tab in {"FASTA Sequences", "Newick Output"}:
             st.session_state[sidebar_tab_key] = "Simulation"
@@ -525,15 +542,23 @@ def render_app() -> None:
             with st.expander("Reconstructed Newick"):
                 st.code(st.session_state[reconstruction_newick_key], language="text")
     with download_tab:
-        # A single selector and button avoids four competing download controls.
+        # Initialize the editable stem before Streamlit creates its stateful widget.
+        st.session_state.setdefault(
+            download_stem_key,
+            default_download_stem(
+                st.session_state.get(download_selection_key, DOWNLOAD_OPTIONS[0]),
+                st.session_state.get("strict_distance_matrix"),
+            ),
+        )
         download_selection = st.selectbox(
             "Download",
             options=DOWNLOAD_OPTIONS,
+            key=download_selection_key,
+            on_change=reset_download_stem,
         )
         download_stem_input = st.text_input(
             "File stem",
-            value="",
-            placeholder="example_run",
+            key=download_stem_key,
             help="Enter the name to use for downloads, without a path or extension.",
         )
         download_stem, download_stem_error = validate_download_stem(download_stem_input)
