@@ -82,6 +82,7 @@ def dark_theme_css() -> str:
     }}
 
     .stButton > button,
+    .stFormSubmitButton > button,
     .stDownloadButton > button {{
       background: {colors["button"]};
       border-color: {colors["button"]};
@@ -90,6 +91,7 @@ def dark_theme_css() -> str:
     }}
 
     .stButton > button:hover,
+    .stFormSubmitButton > button:hover,
     .stDownloadButton > button:hover {{
       background: {colors["button_hover"]};
       border-color: {colors["button_hover"]};
@@ -97,6 +99,7 @@ def dark_theme_css() -> str:
     }}
 
     .stButton > button:disabled,
+    .stFormSubmitButton > button:disabled,
     .stDownloadButton > button:disabled {{
       background: {colors["row_stripe"]};
       border-color: {colors["border"]};

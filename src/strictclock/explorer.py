@@ -271,8 +271,6 @@ def render_app() -> None:
     st.markdown(dark_theme_css(), unsafe_allow_html=True)
     st.title("Strict Molecular Clock Explorer")
 
-    sidebar_tab_key = "strict_sidebar_tab"
-    main_tab_key = "strict_main_tab"
     reconstruction_warning_key = "strict_reconstruction_warning"
     reconstruction_error_key = "strict_reconstruction_error"
     reconstruction_dot_key = "strict_reconstruction_dot"
@@ -287,20 +285,6 @@ def render_app() -> None:
         "Reconstruction",
         "Downloads",
     ]
-
-    def sync_main_tab_from_sidebar() -> None:
-        """Select the matching main output tab when the sidebar tab changes.
-
-        :return: None.
-        """
-        # Read the sidebar's persisted selection before mapping it to an output tab.
-        sidebar_tab = st.session_state.get(sidebar_tab_key)
-        if sidebar_tab == "Simulation":
-            st.session_state[main_tab_key] = "FASTA Sequences"
-        elif sidebar_tab == "Distance":
-            st.session_state[main_tab_key] = "Distance Analysis"
-        elif sidebar_tab == "Reconstruction":
-            st.session_state[main_tab_key] = "Reconstruction"
 
     def reset_download_stem() -> None:
         """Reset the editable file stem after the download selection changes.
@@ -319,25 +303,9 @@ def render_app() -> None:
             reset_stem=True,
         )
 
-    def sync_sidebar_tab_from_main() -> None:
-        """Select the matching sidebar tab when the main output tab changes.
-
-        :return: None.
-        """
-        # Map output tabs back to the sidebar section that controls their content.
-        main_tab = st.session_state.get(main_tab_key)
-        if main_tab in {"FASTA Sequences", "Newick Output"}:
-            st.session_state[sidebar_tab_key] = "Simulation"
-        elif main_tab == "Distance Analysis":
-            st.session_state[sidebar_tab_key] = "Distance"
-        elif main_tab == "Reconstruction":
-            st.session_state[sidebar_tab_key] = "Reconstruction"
-
     with st.sidebar:
         simulation_sidebar_tab, distance_sidebar_tab, reconstruction_sidebar_tab = st.tabs(
             ["Simulation", "Distance", "Reconstruction"],
-            key=sidebar_tab_key,
-            on_change=sync_main_tab_from_sidebar,
         )
 
     with simulation_sidebar_tab:
@@ -411,54 +379,58 @@ def render_app() -> None:
             state_key_prefix="strict",
         )
 
+    def reconstruct_current_tree() -> None:
+        """Reconstruct before Streamlit starts the button-triggered page rerender."""
+        matrix_payload = st.session_state.get("strict_distance_matrix")
+        if matrix_payload is None:
+            # A container-side WebSocket reconnect can create a fresh Streamlit
+            # session between sidebar actions. Rebuild this inexpensive derived
+            # value from the current simulation instead of losing the workflow.
+            distance_model = selected_distance_model("strict")
+            matrix_payload = calculate_distance_matrix(
+                result.terminal_sequences,
+                distance_type=distance_model,
+            )
+            st.session_state["strict_distance_model"] = distance_model
+            st.session_state["strict_distance_matrix"] = matrix_payload
+        try:
+            reconstructed_tree = reconstruct_tree(
+                matrix_payload,
+                method=st.session_state["strict_reconstruction_algorithm"],
+            )
+        except ValueError as error:
+            st.session_state[reconstruction_warning_key] = False
+            st.session_state[reconstruction_error_key] = str(error)
+            st.session_state.pop(reconstruction_dot_key, None)
+            st.session_state.pop(reconstruction_newick_key, None)
+        else:
+            st.session_state[reconstruction_warning_key] = False
+            st.session_state.pop(reconstruction_error_key, None)
+            st.session_state[reconstruction_dot_key] = reconstructed_tree_to_dot(
+                reconstructed_tree,
+                graph_name="strict_reconstructed_tree",
+                colors=DARK_THEME,
+            )
+            st.session_state[reconstruction_newick_key] = reconstructed_tree_newick(
+                reconstructed_tree
+            )
+
     with reconstruction_sidebar_tab:
         st.header("Reconstruction")
-        st.selectbox(
-            "Algorithm",
-            options=("UPGMA", "Neighbor Joining"),
-            key="strict_reconstruction_algorithm",
-        )
-        if st.button("Reconstruct Tree", key="strict_reconstruct_tree", width="stretch"):
-            st.session_state[main_tab_key] = "Reconstruction"
-            matrix_payload = st.session_state.get("strict_distance_matrix")
-            if matrix_payload is None:
-                # A container-side WebSocket reconnect can create a fresh Streamlit
-                # session between sidebar actions. Rebuild this inexpensive derived
-                # value from the current simulation instead of losing the workflow.
-                distance_model = selected_distance_model("strict")
-                matrix_payload = calculate_distance_matrix(
-                    result.terminal_sequences,
-                    distance_type=distance_model,
-                )
-                st.session_state["strict_distance_model"] = distance_model
-                st.session_state["strict_distance_matrix"] = matrix_payload
-            if matrix_payload is None:
-                st.session_state[reconstruction_warning_key] = True
-                st.session_state.pop(reconstruction_error_key, None)
-                st.session_state.pop(reconstruction_dot_key, None)
-                st.session_state.pop(reconstruction_newick_key, None)
-            else:
-                try:
-                    reconstructed_tree = reconstruct_tree(
-                        matrix_payload,
-                        method=st.session_state["strict_reconstruction_algorithm"],
-                    )
-                except ValueError as error:
-                    st.session_state[reconstruction_warning_key] = False
-                    st.session_state[reconstruction_error_key] = str(error)
-                    st.session_state.pop(reconstruction_dot_key, None)
-                    st.session_state.pop(reconstruction_newick_key, None)
-                else:
-                    st.session_state[reconstruction_warning_key] = False
-                    st.session_state.pop(reconstruction_error_key, None)
-                    st.session_state[reconstruction_dot_key] = reconstructed_tree_to_dot(
-                        reconstructed_tree,
-                        graph_name="strict_reconstructed_tree",
-                        colors=DARK_THEME,
-                    )
-                    st.session_state[reconstruction_newick_key] = reconstructed_tree_newick(
-                        reconstructed_tree
-                    )
+        # Submit the algorithm and action as one event. Separate widget reruns can
+        # race when the explorer is running in a slower container.
+        with st.form("strict_reconstruction_form"):
+            st.selectbox(
+                "Algorithm",
+                options=("UPGMA", "Neighbor Joining"),
+                key="strict_reconstruction_algorithm",
+            )
+            st.form_submit_button(
+                "Reconstruct Tree",
+                type="primary",
+                width="stretch",
+                on_click=reconstruct_current_tree,
+            )
 
     # The tree is the primary visual output for this explorer release.
     st.subheader("Phylogenetic Tree")
@@ -478,8 +450,6 @@ def render_app() -> None:
 
     sequence_tab, newick_tab, distance_tab, reconstruction_tab, download_tab = st.tabs(
         main_tab_labels,
-        key=main_tab_key,
-        on_change=sync_sidebar_tab_from_main,
     )
     with sequence_tab:
         st.code(fasta, language="text")

@@ -585,7 +585,7 @@ def main() -> int:
     return subprocess.call(command)
 
 
-def render_app() -> None:
+def render_tabbed_app() -> None:
     """Render the Streamlit application.
 
     :return: None.
@@ -604,8 +604,6 @@ def render_app() -> None:
     st.markdown(dark_theme_css(), unsafe_allow_html=True)
     st.title("Relaxed Molecular Clock Explorer")
 
-    sidebar_tab_key = "relaxed_sidebar_tab"
-    main_tab_key = "relaxed_main_tab"
     reconstruction_warning_key = "relaxed_reconstruction_warning"
     reconstruction_error_key = "relaxed_reconstruction_error"
     reconstruction_dot_key = "relaxed_reconstruction_dot"
@@ -620,20 +618,6 @@ def render_app() -> None:
         "Reconstruction",
         "Downloads",
     ]
-
-    def sync_main_tab_from_sidebar() -> None:
-        """Select the matching main output tab when the sidebar tab changes.
-
-        :return: None.
-        """
-        # Read the sidebar's persisted selection before mapping it to an output tab.
-        sidebar_tab = st.session_state.get(sidebar_tab_key)
-        if sidebar_tab == "Simulation":
-            st.session_state[main_tab_key] = "FASTA Sequences"
-        elif sidebar_tab == "Distance":
-            st.session_state[main_tab_key] = "Distance Analysis"
-        elif sidebar_tab == "Reconstruction":
-            st.session_state[main_tab_key] = "Reconstruction"
 
     def reset_download_stem() -> None:
         """Reset the editable file stem after the download selection changes.
@@ -652,25 +636,9 @@ def render_app() -> None:
             reset_stem=True,
         )
 
-    def sync_sidebar_tab_from_main() -> None:
-        """Select the matching sidebar tab when the main output tab changes.
-
-        :return: None.
-        """
-        # Map output tabs back to the sidebar section that controls their content.
-        main_tab = st.session_state.get(main_tab_key)
-        if main_tab in {"FASTA Sequences", "Newick Output"}:
-            st.session_state[sidebar_tab_key] = "Simulation"
-        elif main_tab == "Distance Analysis":
-            st.session_state[sidebar_tab_key] = "Distance"
-        elif main_tab == "Reconstruction":
-            st.session_state[sidebar_tab_key] = "Reconstruction"
-
     with st.sidebar:
         simulation_sidebar_tab, distance_sidebar_tab, reconstruction_sidebar_tab = st.tabs(
             ["Simulation", "Distance", "Reconstruction"],
-            key=sidebar_tab_key,
-            on_change=sync_main_tab_from_sidebar,
         )
 
     with simulation_sidebar_tab:
@@ -804,54 +772,58 @@ def render_app() -> None:
             state_key_prefix="relaxed",
         )
 
+    def reconstruct_current_tree() -> None:
+        """Reconstruct before Streamlit starts the button-triggered page rerender."""
+        matrix_payload = st.session_state.get("relaxed_distance_matrix")
+        if matrix_payload is None:
+            # A container-side WebSocket reconnect can create a fresh Streamlit
+            # session between sidebar actions. Rebuild this inexpensive derived
+            # value from the current simulation instead of losing the workflow.
+            distance_model = selected_distance_model("relaxed")
+            matrix_payload = calculate_distance_matrix(
+                result.terminal_sequences,
+                distance_type=distance_model,
+            )
+            st.session_state["relaxed_distance_model"] = distance_model
+            st.session_state["relaxed_distance_matrix"] = matrix_payload
+        try:
+            reconstructed_tree = reconstruct_tree(
+                matrix_payload,
+                method=st.session_state["relaxed_reconstruction_algorithm"],
+            )
+        except ValueError as error:
+            st.session_state[reconstruction_warning_key] = False
+            st.session_state[reconstruction_error_key] = str(error)
+            st.session_state.pop(reconstruction_dot_key, None)
+            st.session_state.pop(reconstruction_newick_key, None)
+        else:
+            st.session_state[reconstruction_warning_key] = False
+            st.session_state.pop(reconstruction_error_key, None)
+            st.session_state[reconstruction_dot_key] = reconstructed_tree_to_dot(
+                reconstructed_tree,
+                graph_name="relaxed_reconstructed_tree",
+                colors=DARK_THEME,
+            )
+            st.session_state[reconstruction_newick_key] = reconstructed_tree_newick(
+                reconstructed_tree
+            )
+
     with reconstruction_sidebar_tab:
         st.header("Reconstruction")
-        st.selectbox(
-            "Algorithm",
-            options=("UPGMA", "Neighbor Joining"),
-            key="relaxed_reconstruction_algorithm",
-        )
-        if st.button("Reconstruct Tree", key="relaxed_reconstruct_tree", width="stretch"):
-            st.session_state[main_tab_key] = "Reconstruction"
-            matrix_payload = st.session_state.get("relaxed_distance_matrix")
-            if matrix_payload is None:
-                # A container-side WebSocket reconnect can create a fresh Streamlit
-                # session between sidebar actions. Rebuild this inexpensive derived
-                # value from the current simulation instead of losing the workflow.
-                distance_model = selected_distance_model("relaxed")
-                matrix_payload = calculate_distance_matrix(
-                    result.terminal_sequences,
-                    distance_type=distance_model,
-                )
-                st.session_state["relaxed_distance_model"] = distance_model
-                st.session_state["relaxed_distance_matrix"] = matrix_payload
-            if matrix_payload is None:
-                st.session_state[reconstruction_warning_key] = True
-                st.session_state.pop(reconstruction_error_key, None)
-                st.session_state.pop(reconstruction_dot_key, None)
-                st.session_state.pop(reconstruction_newick_key, None)
-            else:
-                try:
-                    reconstructed_tree = reconstruct_tree(
-                        matrix_payload,
-                        method=st.session_state["relaxed_reconstruction_algorithm"],
-                    )
-                except ValueError as error:
-                    st.session_state[reconstruction_warning_key] = False
-                    st.session_state[reconstruction_error_key] = str(error)
-                    st.session_state.pop(reconstruction_dot_key, None)
-                    st.session_state.pop(reconstruction_newick_key, None)
-                else:
-                    st.session_state[reconstruction_warning_key] = False
-                    st.session_state.pop(reconstruction_error_key, None)
-                    st.session_state[reconstruction_dot_key] = reconstructed_tree_to_dot(
-                        reconstructed_tree,
-                        graph_name="relaxed_reconstructed_tree",
-                        colors=DARK_THEME,
-                    )
-                    st.session_state[reconstruction_newick_key] = reconstructed_tree_newick(
-                        reconstructed_tree
-                    )
+        # Submit the algorithm and action as one event. Separate widget reruns can
+        # race when the explorer is running in a slower container.
+        with st.form("relaxed_reconstruction_form"):
+            st.selectbox(
+                "Algorithm",
+                options=("UPGMA", "Neighbor Joining"),
+                key="relaxed_reconstruction_algorithm",
+            )
+            st.form_submit_button(
+                "Reconstruct Tree",
+                type="primary",
+                width="stretch",
+                on_click=reconstruct_current_tree,
+            )
 
     # The tree is the primary visual output for this explorer release.
     st.subheader("Phylogenetic Tree")
@@ -879,8 +851,6 @@ def render_app() -> None:
 
     sequence_tab, newick_tab, distance_tab, reconstruction_tab, download_tab = st.tabs(
         main_tab_labels,
-        key=main_tab_key,
-        on_change=sync_sidebar_tab_from_main,
     )
     with sequence_tab:
         st.code(fasta, language="text")
@@ -981,6 +951,234 @@ def render_app() -> None:
                     mime=mime,
                     width="stretch",
                 )
+
+
+def render_app() -> None:
+    """Render the relaxed explorer as one explicit, conditionally rendered workflow."""
+    import streamlit as st
+
+    defaults = ExplorerDefaults()
+    st.set_page_config(
+        page_title="Relaxed Molecular Clock Explorer",
+        page_icon="",
+        layout="wide",
+    )
+    st.markdown(dark_theme_css(), unsafe_allow_html=True)
+    st.title("Relaxed Molecular Clock Explorer")
+
+    with st.sidebar:
+        st.header("Workflow")
+        stage = st.radio(
+            "Stage",
+            options=("Simulation", "Distance Matrix", "Reconstruction", "Downloads"),
+            key="relaxed_workflow_stage",
+            label_visibility="collapsed",
+        )
+
+    if "relaxed_result" not in st.session_state:
+        initial_config = build_config(
+            sequence_length=defaults.sequence_length,
+            max_depth=defaults.max_depth,
+            random_seed=defaults.random_seed,
+            branch_duration=defaults.branch_duration,
+            duration_jitter=defaults.duration_jitter,
+            root_rate=defaults.root_rate,
+            rate_sigma=defaults.rate_sigma,
+            minimum_rate=defaults.minimum_rate,
+            maximum_rate=defaults.maximum_rate,
+            newick_branch_lengths=defaults.newick_branch_lengths,
+            allow_back_mutation=defaults.allow_back_mutation,
+        )
+        st.session_state.relaxed_result = run_simulation(initial_config)
+
+    if stage == "Simulation":
+        with st.sidebar:
+            st.header("Simulation")
+            max_depth = st.slider("Tree depth", 1, 6, defaults.max_depth)
+            sequence_length = st.slider(
+                "Sequence length", 10, 5000, defaults.sequence_length, step=10
+            )
+            branch_duration = st.number_input(
+                "Branch duration", 0.01, 100.0, defaults.branch_duration, step=0.1
+            )
+            duration_jitter = st.number_input(
+                "Duration jitter",
+                0.0,
+                max(0.0, branch_duration - 0.01),
+                min(defaults.duration_jitter, max(0.0, branch_duration - 0.01)),
+                step=0.01,
+            )
+            root_rate = st.number_input(
+                "Root rate", 0.00001, 10.0, defaults.root_rate, step=0.001, format="%.5f"
+            )
+            rate_sigma = st.number_input(
+                "Rate sigma", 0.0, 5.0, defaults.rate_sigma, step=0.05
+            )
+            minimum_rate = st.number_input(
+                "Minimum rate",
+                0.00001,
+                root_rate,
+                min(defaults.minimum_rate, root_rate),
+                step=0.001,
+                format="%.5f",
+            )
+            maximum_rate = st.number_input(
+                "Maximum rate",
+                root_rate,
+                10.0,
+                max(defaults.maximum_rate, root_rate),
+                step=0.001,
+                format="%.5f",
+            )
+            newick_branch_lengths = st.selectbox(
+                "Newick branch lengths", options=("genetic_change", "time", "rate")
+            )
+            allow_back_mutation = st.checkbox(
+                "Allow back mutation", value=defaults.allow_back_mutation
+            )
+            random_seed = st.number_input(
+                "Random seed", 0, 2_147_483_647, defaults.random_seed, step=1
+            )
+            generate = st.button("Generate", type="primary", width="stretch")
+
+        if generate:
+            config = build_config(
+                sequence_length=sequence_length,
+                max_depth=max_depth,
+                random_seed=int(random_seed),
+                branch_duration=branch_duration,
+                duration_jitter=duration_jitter,
+                root_rate=root_rate,
+                rate_sigma=rate_sigma,
+                minimum_rate=minimum_rate,
+                maximum_rate=maximum_rate,
+                newick_branch_lengths=newick_branch_lengths,
+                allow_back_mutation=allow_back_mutation,
+            )
+            st.session_state.relaxed_result = run_simulation(config)
+            for key in (
+                "relaxed_distance_matrix",
+                "relaxed_distance_model",
+                "relaxed_reconstruction_dot",
+                "relaxed_reconstruction_newick",
+                "relaxed_reconstruction_error",
+            ):
+                st.session_state.pop(key, None)
+
+    result: RelaxedClockResult = st.session_state.relaxed_result
+    summary = summarize_result(result)
+    fasta = fasta_text(result)
+    metadata = metadata_json(result)
+    branch_lengths = result.config.outputs.newick_branch_lengths
+
+    if stage == "Simulation":
+        st.subheader("Simulated Phylogeny")
+        st.markdown(tree_to_svg(result.root, branch_lengths), unsafe_allow_html=True)
+        columns = st.columns(4)
+        columns[0].metric("Taxa", summary["terminal_taxa"])
+        columns[1].metric("Sequence length", summary["sequence_length"])
+        columns[2].metric("Mutations", summary["total_observed_substitutions"])
+        columns[3].metric("Seed", summary["random_seed"])
+        st.subheader("Terminal Sequences")
+        st.code(fasta, language="text")
+        with st.expander("True tree Newick"):
+            st.code(result.newick, language="text")
+
+    elif stage == "Distance Matrix":
+        with st.sidebar:
+            st.header("Distance Matrix")
+            render_distance_analysis_controls(
+                result.terminal_sequences,
+                state_key_prefix="relaxed",
+            )
+        st.subheader("Distance Analysis")
+        render_distance_analysis_tab(
+            result.terminal_sequences,
+            state_key_prefix="relaxed",
+        )
+
+    elif stage == "Reconstruction":
+        with st.sidebar:
+            st.header("Reconstruction")
+            algorithm = st.selectbox(
+                "Algorithm",
+                options=("UPGMA", "Neighbor Joining"),
+                key="relaxed_workflow_reconstruction_algorithm",
+            )
+            reconstruct = st.button("Reconstruct Tree", type="primary", width="stretch")
+
+        if reconstruct:
+            matrix_payload = st.session_state.get("relaxed_distance_matrix")
+            if matrix_payload is None:
+                st.warning("Calculate a distance matrix before reconstructing a tree.")
+            else:
+                try:
+                    reconstructed = reconstruct_tree(matrix_payload, method=algorithm)
+                except ValueError as error:
+                    st.session_state["relaxed_reconstruction_error"] = str(error)
+                    st.session_state.pop("relaxed_reconstruction_dot", None)
+                    st.session_state.pop("relaxed_reconstruction_newick", None)
+                else:
+                    st.session_state.pop("relaxed_reconstruction_error", None)
+                    st.session_state["relaxed_reconstruction_dot"] = reconstructed_tree_to_dot(
+                        reconstructed,
+                        graph_name="relaxed_reconstructed_tree",
+                        colors=DARK_THEME,
+                    )
+                    st.session_state["relaxed_reconstruction_newick"] = (
+                        reconstructed_tree_newick(reconstructed)
+                    )
+
+        st.subheader("Reconstructed Phylogeny")
+        if st.session_state.get("relaxed_reconstruction_error"):
+            st.warning(st.session_state["relaxed_reconstruction_error"])
+        elif st.session_state.get("relaxed_reconstruction_dot"):
+            st.graphviz_chart(st.session_state["relaxed_reconstruction_dot"], width="stretch")
+            with st.expander("Reconstructed Newick"):
+                st.code(st.session_state["relaxed_reconstruction_newick"], language="text")
+        else:
+            st.info("Calculate a distance matrix, then reconstruct a tree.")
+
+    else:
+        st.subheader("Downloads")
+        selection = st.selectbox(
+            "Download",
+            options=DOWNLOAD_OPTIONS,
+            key="relaxed_workflow_download_selection",
+        )
+        default_stem = default_download_stem(
+            selection, st.session_state.get("relaxed_distance_matrix")
+        )
+        stem_input = st.text_input("File stem", value=default_stem)
+        stem, stem_error = validate_download_stem(stem_input)
+        try:
+            data, extension, mime = download_payload(
+                selection,
+                result,
+                fasta=fasta,
+                metadata=metadata,
+                tree_dot=result.root,
+                branch_lengths=branch_lengths,
+                distance_matrix=st.session_state.get("relaxed_distance_matrix"),
+                reconstructed_newick=st.session_state.get("relaxed_reconstruction_newick"),
+                reconstructed_dot=st.session_state.get("relaxed_reconstruction_dot"),
+            )
+        except (ValueError, RuntimeError, subprocess.CalledProcessError) as error:
+            st.warning(str(error))
+            st.download_button(
+                "Download", data="", file_name="unavailable", disabled=True, width="stretch"
+            )
+        else:
+            if stem_error:
+                st.warning(stem_error)
+            st.download_button(
+                "Download",
+                data=data,
+                file_name=download_filename(stem, extension),
+                mime=mime,
+                disabled=stem_error is not None,
+                width="stretch",
+            )
 
 
 if __name__ == "__main__":
