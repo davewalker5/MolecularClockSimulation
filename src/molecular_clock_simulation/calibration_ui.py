@@ -5,7 +5,9 @@ from __future__ import annotations
 from typing import Any
 
 from treecalibration.calibration import calibrate_tree, to_newick
-from treecomparison.comparison import parse_newick, tree_to_dot
+from treecomparison.comparison import parse_newick
+from molecular_clock_simulation.reconstruction import calibrated_tree_to_dot
+from common import DARK_THEME
 
 
 def calibration_state_keys(state_prefix: str) -> tuple[str, ...]:
@@ -113,10 +115,10 @@ def render_calibration_tab(
         else:
             st.session_state.pop(f"{state_prefix}_calibration_error", None)
             st.session_state[f"{state_prefix}_calibration_newick"] = to_newick(calibrated)
-            st.session_state[f"{state_prefix}_calibration_dot"] = tree_to_dot(
+            st.session_state[f"{state_prefix}_calibration_dot"] = calibrated_tree_to_dot(
                 calibrated,
-                "Calibrated Phylogeny",
-                f"branch lengths in million years; scale factor {metadata['scale_factor']:.6g}",
+                graph_name=f"{state_prefix}_calibrated_tree",
+                colors=DARK_THEME,
             )
             st.session_state[f"{state_prefix}_calibration_metadata"] = metadata
 

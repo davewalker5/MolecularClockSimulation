@@ -8,6 +8,8 @@ from treecalibration.calibration import calibrate_tree, to_newick
 from treecalibration.cli import main
 from treecomparison.comparison import parse_newick
 from molecular_clock_simulation.calibration_ui import clear_calibration_state
+from molecular_clock_simulation.reconstruction import calibrated_tree_to_dot
+from common import DARK_THEME
 
 
 def test_calibrate_tree_scales_copy_from_mrca_tip_depth():
@@ -111,3 +113,21 @@ def test_clear_calibration_state_removes_results_and_widget_values():
     clear_calibration_state(state, "strict")
 
     assert state == {"unrelated": "preserved"}
+
+
+def test_calibrated_tree_dot_matches_explorer_tree_styling():
+    """Confirm calibrated trees use the explorers' dark reconstruction format.
+
+    :return: None.
+    """
+    dot = calibrated_tree_to_dot(
+        parse_newick("((A:10,B:10):5,C:15);"),
+        graph_name="calibrated_tree",
+        colors=DARK_THEME,
+    )
+
+    assert "rankdir=LR" in dot
+    assert DARK_THEME["page_bg"] in dot
+    assert 'shape=box, style="rounded,filled"' in dot
+    assert 'label="A"' in dot
+    assert 'label="10"' in dot
