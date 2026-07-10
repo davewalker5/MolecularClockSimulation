@@ -514,7 +514,8 @@ def build_time_tree(
     """
     # Nodes at max depth are present-day terminal taxa.
     if depth == max_depth:
-        taxon_id = taxon_counter.next("Taxon")
+        # Match the strict-clock convention so taxa can share downstream configs.
+        taxon_id = taxon_counter.next("taxon")
         return RelaxedTreeNode(
             id=id_counter.next("leaf"),
             name=taxon_id,

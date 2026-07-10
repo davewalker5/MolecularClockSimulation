@@ -1,0 +1,6 @@
+{
+  "node": {
+    "taxa": ["taxon_1", "taxon_2"]
+  },
+  "age_mya": 10.0
+}

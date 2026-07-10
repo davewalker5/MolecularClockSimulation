@@ -217,7 +217,7 @@ def test_relaxed_explorer_helpers_render_current_simulation_result():
     assert "rankdir=LR" in dot
     assert DARK_THEME["page_bg"] in dot
     assert DARK_THEME["surface_elevated"] in dot
-    assert "Taxon_1" in dot
+    assert "taxon_1" in dot
     assert "Newick genetic" in dot
     assert "Newick time" in time_dot
     assert time_dot != dot
