@@ -22,6 +22,8 @@ from common import (
     DOWNLOAD_SIMULATION_METADATA,
     DOWNLOAD_DISTANCE_MATRIX_JSON,
     DOWNLOAD_DISTANCE_MATRIX_CSV,
+    DOWNLOAD_RECONSTRUCTED_TREE_NEWICK,
+    DOWNLOAD_RECONSTRUCTED_TREE_PNG,
     DARK_THEME,
     dark_theme_css
 )
@@ -198,6 +200,66 @@ def test_distance_matrix_download_requires_calculated_matrix(selection):
             metadata=metadata_json(result),
             tree_dot=tree_to_dot(result.root),
         )
+
+
+@pytest.mark.parametrize(
+    "selection",
+    [DOWNLOAD_RECONSTRUCTED_TREE_NEWICK, DOWNLOAD_RECONSTRUCTED_TREE_PNG],
+)
+def test_reconstructed_tree_download_requires_completed_reconstruction(selection):
+    """Confirm reconstructed exports require a completed reconstruction.
+
+    :param selection: Reconstructed tree download option under test.
+    :return: None.
+    """
+    result = run_simulation(make_config(sequence_length=20, number_of_taxa=4))
+
+    # Missing reconstructed state should become the warning shown by the UI button.
+    with pytest.raises(ValueError, match="reconstruct a tree"):
+        download_payload(
+            selection,
+            result,
+            fasta=fasta_text(result),
+            metadata=metadata_json(result),
+            tree_dot=tree_to_dot(result.root),
+        )
+
+
+@pytest.mark.parametrize(
+    "selection,extension,mime",
+    [
+        (DOWNLOAD_RECONSTRUCTED_TREE_NEWICK, "newick", "text/plain"),
+        (DOWNLOAD_RECONSTRUCTED_TREE_PNG, "png", "image/png"),
+    ],
+)
+def test_reconstructed_tree_download_payload(selection, extension, mime):
+    """Confirm completed reconstructions export as Newick and PNG.
+
+    :param selection: Reconstructed tree download option under test.
+    :param extension: Expected filename extension.
+    :param mime: Expected response MIME type.
+    :return: None.
+    """
+    result = run_simulation(make_config(sequence_length=20, number_of_taxa=4))
+    reconstructed_dot = "digraph reconstructed { A -> B; }"
+
+    # Supply both representations because the selected format chooses the required one.
+    data, actual_extension, actual_mime = download_payload(
+        selection,
+        result,
+        fasta=fasta_text(result),
+        metadata=metadata_json(result),
+        tree_dot=tree_to_dot(result.root),
+        reconstructed_newick="(A:1,B:1);",
+        reconstructed_dot=reconstructed_dot,
+    )
+
+    assert actual_extension == extension
+    assert actual_mime == mime
+    if selection == DOWNLOAD_RECONSTRUCTED_TREE_PNG:
+        assert data.startswith(b"\x89PNG\r\n\x1a\n")
+    else:
+        assert data == "(A:1,B:1);\n"
 
 
 def test_distance_matrix_download_serializes_json_payload():

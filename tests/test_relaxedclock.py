@@ -25,6 +25,8 @@ from common import (
     DOWNLOAD_SIMULATION_METADATA,
     DOWNLOAD_DISTANCE_MATRIX_JSON,
     DOWNLOAD_DISTANCE_MATRIX_CSV,
+    DOWNLOAD_RECONSTRUCTED_TREE_NEWICK,
+    DOWNLOAD_RECONSTRUCTED_TREE_PNG,
     DARK_THEME,
     dark_theme_css
 )
@@ -373,6 +375,7 @@ def test_relaxed_distance_matrix_download_requires_calculated_matrix(selection):
         )
     )
 
+    # Both matrix formats require the same calculated matrix state.
     with pytest.raises(ValueError, match="calculate a distance matrix"):
         download_payload(
             selection,
@@ -381,6 +384,58 @@ def test_relaxed_distance_matrix_download_requires_calculated_matrix(selection):
             metadata=metadata_json(result),
             tree_dot=tree_to_dot(result.root),
         )
+
+
+@pytest.mark.parametrize(
+    "selection",
+    [DOWNLOAD_RECONSTRUCTED_TREE_NEWICK, DOWNLOAD_RECONSTRUCTED_TREE_PNG],
+)
+def test_relaxed_reconstructed_download_requires_reconstruction(selection):
+    """Confirm relaxed reconstructed exports require prior reconstruction.
+
+    :param selection: Reconstructed tree download option under test.
+    :return: None.
+    """
+    result = run_simulation(make_config())
+
+    # Missing reconstructed state should become the warning shown by the UI button.
+    with pytest.raises(ValueError, match="reconstruct a tree"):
+        download_payload(
+            selection,
+            result,
+            fasta=fasta_text(result),
+            metadata=metadata_json(result),
+            tree_dot=result.root,
+        )
+
+
+def test_relaxed_reconstructed_downloads_export_newick_and_png():
+    """Confirm relaxed reconstructions export both requested file formats.
+
+    :return: None.
+    """
+    result = run_simulation(make_config())
+    keyword_arguments = {
+        "fasta": fasta_text(result),
+        "metadata": metadata_json(result),
+        "tree_dot": result.root,
+        "reconstructed_newick": "(A:1,B:1);",
+        "reconstructed_dot": "digraph reconstructed { A -> B; }",
+    }
+
+    # Exercise text and image serialization from the same reconstructed state.
+    newick, newick_extension, newick_mime = download_payload(
+        DOWNLOAD_RECONSTRUCTED_TREE_NEWICK, result, **keyword_arguments
+    )
+    png, png_extension, png_mime = download_payload(
+        DOWNLOAD_RECONSTRUCTED_TREE_PNG, result, **keyword_arguments
+    )
+
+    assert (newick, newick_extension, newick_mime) == (
+        "(A:1,B:1);\n", "newick", "text/plain"
+    )
+    assert png.startswith(b"\x89PNG\r\n\x1a\n")
+    assert (png_extension, png_mime) == ("png", "image/png")
 
 
 def test_relaxed_distance_matrix_download_serializes_json_payload():

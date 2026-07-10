@@ -38,6 +38,8 @@ from common import (
     DOWNLOAD_SIMULATION_METADATA,
     DOWNLOAD_DISTANCE_MATRIX_JSON,
     DOWNLOAD_DISTANCE_MATRIX_CSV,
+    DOWNLOAD_RECONSTRUCTED_TREE_NEWICK,
+    DOWNLOAD_RECONSTRUCTED_TREE_PNG,
     DOWNLOAD_OPTIONS,
     DARK_THEME,
     dark_theme_css
@@ -570,6 +572,8 @@ def download_payload(
     tree_dot: str | RelaxedTreeNode,
     branch_lengths: str = "genetic_change",
     distance_matrix: dict[str, Any] | None = None,
+    reconstructed_newick: str | None = None,
+    reconstructed_dot: str | None = None,
 ) -> tuple[str | bytes, str, str]:
     """Return data, extension, and MIME type for one download option.
 
@@ -580,6 +584,8 @@ def download_payload(
     :param tree_dot: DOT source or relaxed tree root for the generated tree.
     :param branch_lengths: Branch value used to scale tree image downloads.
     :param distance_matrix: Calculated distance matrix payload, when available.
+    :param reconstructed_newick: Reconstructed Newick text, when available.
+    :param reconstructed_dot: Reconstructed tree DOT source, when available.
     :return: Tuple of download data, filename extension, and MIME type.
     """
     # Centralize option handling so the UI and tests share one source of truth.
@@ -599,6 +605,16 @@ def download_payload(
         if distance_matrix is None:
             raise ValueError("You must calculate a distance matrix before downloading it.")
         return distance_matrix_csv_text(distance_matrix), "csv", "text/csv"
+    if selection == DOWNLOAD_RECONSTRUCTED_TREE_NEWICK:
+        if reconstructed_newick is None:
+            raise ValueError("You must reconstruct a tree before downloading it.")
+        # Add a trailing newline so the downloaded Newick is a complete text file.
+        return reconstructed_newick.rstrip("\n") + "\n", "newick", "text/plain"
+    if selection == DOWNLOAD_RECONSTRUCTED_TREE_PNG:
+        if reconstructed_dot is None:
+            raise ValueError("You must reconstruct a tree before downloading it.")
+        # Render the same DOT source displayed in the reconstruction results tab.
+        return tree_png_bytes(reconstructed_dot), "png", "image/png"
     raise ValueError(f"Unknown download selection: {selection}")
 
 
@@ -653,7 +669,11 @@ def render_app() -> None:
     ]
 
     def sync_main_tab_from_sidebar() -> None:
-        """Select the matching main output tab when the sidebar tab changes."""
+        """Select the matching main output tab when the sidebar tab changes.
+
+        :return: None.
+        """
+        # Read the sidebar's persisted selection before mapping it to an output tab.
         sidebar_tab = st.session_state.get(sidebar_tab_key)
         if sidebar_tab == "Simulation":
             st.session_state[main_tab_key] = "FASTA Sequences"
@@ -933,9 +953,16 @@ def render_app() -> None:
                     tree_dot=result.root,
                     branch_lengths=branch_lengths,
                     distance_matrix=st.session_state.get("relaxed_distance_matrix"),
+                    reconstructed_newick=st.session_state.get(reconstruction_newick_key),
+                    reconstructed_dot=st.session_state.get(reconstruction_dot_key),
                 )
             except ValueError as error:
-                if download_selection in {DOWNLOAD_DISTANCE_MATRIX_JSON, DOWNLOAD_DISTANCE_MATRIX_CSV}:
+                if download_selection in {
+                    DOWNLOAD_DISTANCE_MATRIX_JSON,
+                    DOWNLOAD_DISTANCE_MATRIX_CSV,
+                    DOWNLOAD_RECONSTRUCTED_TREE_NEWICK,
+                    DOWNLOAD_RECONSTRUCTED_TREE_PNG,
+                }:
                     if st.button("Download", width="stretch"):
                         st.warning(str(error))
                 else:
