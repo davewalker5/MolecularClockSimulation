@@ -27,6 +27,7 @@ from common import (
     DARK_THEME,
     dark_theme_css,
     default_download_stem,
+    download_unavailable_warning,
 )
 
 
@@ -187,6 +188,46 @@ def test_default_distance_matrix_stem_uses_calculated_method(selection):
     # Read the method from the current payload shared by analysis and downloads.
     assert default_download_stem(selection, matrix) == "distance_matrix_hky85"
     assert default_download_stem(selection) == "distance_matrix"
+
+
+@pytest.mark.parametrize(
+    "selection",
+    [DOWNLOAD_DISTANCE_MATRIX_JSON, DOWNLOAD_DISTANCE_MATRIX_CSV],
+)
+def test_distance_download_selection_warns_when_matrix_is_unavailable(selection):
+    """Confirm selecting an unavailable matrix download produces a warning.
+
+    :param selection: Distance matrix download option under test.
+    :return: None.
+    """
+    # Availability is checked as soon as the selector changes, before payload creation.
+    assert "calculate a distance matrix" in download_unavailable_warning(selection)
+    assert download_unavailable_warning(
+        selection,
+        distance_matrix={"distance_metric": "jc69"},
+    ) is None
+
+
+@pytest.mark.parametrize(
+    "selection,available_state",
+    [
+        (DOWNLOAD_RECONSTRUCTED_TREE_NEWICK, {"reconstructed_newick": "(A,B);"}),
+        (DOWNLOAD_RECONSTRUCTED_TREE_PNG, {"reconstructed_dot": "digraph { A -> B; }"}),
+    ],
+)
+def test_reconstruction_download_selection_warns_when_tree_is_unavailable(
+    selection,
+    available_state,
+):
+    """Confirm selecting an unavailable reconstruction download produces a warning.
+
+    :param selection: Reconstructed tree download option under test.
+    :param available_state: Keyword argument representing completed reconstruction state.
+    :return: None.
+    """
+    # Each format checks the reconstructed representation it needs to serialize.
+    assert "reconstruct a tree" in download_unavailable_warning(selection)
+    assert download_unavailable_warning(selection, **available_state) is None
 
 
 @pytest.mark.parametrize(

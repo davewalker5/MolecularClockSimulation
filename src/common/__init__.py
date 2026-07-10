@@ -11,7 +11,7 @@ from common.constants import (
     DARK_THEME
 )
 
-from common.downloads import default_download_stem
+from common.downloads import default_download_stem, download_unavailable_warning
 from common.styling import dark_theme_css
 
 __all__ = [
@@ -27,4 +27,5 @@ __all__ = [
     DARK_THEME,
     dark_theme_css,
     default_download_stem,
+    download_unavailable_warning,
 ]

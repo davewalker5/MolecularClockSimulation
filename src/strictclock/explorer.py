@@ -42,6 +42,7 @@ from common import (
     DARK_THEME,
     dark_theme_css,
     default_download_stem,
+    download_unavailable_warning,
 )
 
 @dataclass(frozen=True)
@@ -337,6 +338,7 @@ def render_app() -> None:
     reconstruction_newick_key = "strict_reconstruction_newick"
     download_selection_key = "strict_download_selection"
     download_stem_key = "strict_download_stem"
+    download_unavailable_key = "strict_download_unavailable"
     main_tab_labels = [
         "FASTA Sequences",
         "Newick Output",
@@ -364,11 +366,24 @@ def render_app() -> None:
 
         :return: None.
         """
-        # Selection changes intentionally replace any file stem edited by the user.
-        st.session_state[download_stem_key] = default_download_stem(
-            st.session_state[download_selection_key],
-            st.session_state.get("strict_distance_matrix"),
+        selection = st.session_state[download_selection_key]
+        unavailable_warning = download_unavailable_warning(
+            selection,
+            distance_matrix=st.session_state.get("strict_distance_matrix"),
+            reconstructed_newick=st.session_state.get(reconstruction_newick_key),
+            reconstructed_dot=st.session_state.get(reconstruction_dot_key),
         )
+        st.session_state[download_unavailable_key] = unavailable_warning is not None
+        # Unavailable selections remain blank; available selections receive their default.
+        st.session_state[download_stem_key] = (
+            ""
+            if unavailable_warning
+            else default_download_stem(
+                selection,
+                st.session_state.get("strict_distance_matrix"),
+            )
+        )
+
     def sync_sidebar_tab_from_main() -> None:
         """Select the matching sidebar tab when the main output tab changes.
 
@@ -556,13 +571,41 @@ def render_app() -> None:
             key=download_selection_key,
             on_change=reset_download_stem,
         )
+        unavailable_warning = download_unavailable_warning(
+            download_selection,
+            distance_matrix=st.session_state.get("strict_distance_matrix"),
+            reconstructed_newick=st.session_state.get(reconstruction_newick_key),
+            reconstructed_dot=st.session_state.get(reconstruction_dot_key),
+        )
+        was_unavailable = st.session_state.get(download_unavailable_key, False)
+        if unavailable_warning:
+            # Clear any stale or user-edited stem while the selected data is unavailable.
+            st.session_state[download_stem_key] = ""
+        elif was_unavailable:
+            # Populate the default automatically when a calculation makes the data available.
+            st.session_state[download_stem_key] = default_download_stem(
+                download_selection,
+                st.session_state.get("strict_distance_matrix"),
+            )
+        st.session_state[download_unavailable_key] = unavailable_warning is not None
         download_stem_input = st.text_input(
             "File stem",
             key=download_stem_key,
             help="Enter the name to use for downloads, without a path or extension.",
+            disabled=unavailable_warning is not None,
         )
         download_stem, download_stem_error = validate_download_stem(download_stem_input)
-        if download_stem_error:
+        if unavailable_warning:
+            st.warning(unavailable_warning)
+            st.download_button(
+                "Download",
+                data="",
+                file_name="download_unavailable",
+                mime="application/octet-stream",
+                width="stretch",
+                disabled=True,
+            )
+        elif download_stem_error:
             # Keep the button visible but disabled so the required action is clear.
             st.warning(download_stem_error)
             st.download_button(
@@ -587,16 +630,7 @@ def render_app() -> None:
                     reconstructed_dot=st.session_state.get(reconstruction_dot_key),
                 )
             except ValueError as error:
-                if download_selection in {
-                    DOWNLOAD_DISTANCE_MATRIX_JSON,
-                    DOWNLOAD_DISTANCE_MATRIX_CSV,
-                    DOWNLOAD_RECONSTRUCTED_TREE_NEWICK,
-                    DOWNLOAD_RECONSTRUCTED_TREE_PNG,
-                }:
-                    if st.button("Download", width="stretch"):
-                        st.warning(str(error))
-                else:
-                    st.warning(str(error))
+                st.warning(str(error))
             except (RuntimeError, subprocess.CalledProcessError) as error:
                 st.warning(f"{download_selection} export is unavailable: {error}")
             else:

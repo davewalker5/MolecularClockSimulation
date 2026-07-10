@@ -44,3 +44,33 @@ def default_download_stem(
         return f"distance_matrix_{method}" if method else "distance_matrix"
 
     raise ValueError(f"Unknown download selection: {selection}")
+
+
+def download_unavailable_warning(
+    selection: str,
+    *,
+    distance_matrix: dict[str, Any] | None = None,
+    reconstructed_newick: str | None = None,
+    reconstructed_dot: str | None = None,
+) -> str | None:
+    """Return a warning when the selected download data is not available.
+
+    :param selection: User-selected download option.
+    :param distance_matrix: Current calculated distance matrix, when available.
+    :param reconstructed_newick: Current reconstructed Newick text, when available.
+    :param reconstructed_dot: Current reconstructed tree DOT source, when available.
+    :return: Warning text when unavailable, otherwise None.
+    """
+    # Matrix downloads are unavailable until a distance calculation has completed.
+    if (
+        selection in {DOWNLOAD_DISTANCE_MATRIX_JSON, DOWNLOAD_DISTANCE_MATRIX_CSV}
+        and distance_matrix is None
+    ):
+        return "You must calculate a distance matrix before downloading it."
+
+    # Check the representation required by the selected reconstruction format.
+    if selection == DOWNLOAD_RECONSTRUCTED_TREE_NEWICK and reconstructed_newick is None:
+        return "You must reconstruct a tree before downloading it."
+    if selection == DOWNLOAD_RECONSTRUCTED_TREE_PNG and reconstructed_dot is None:
+        return "You must reconstruct a tree before downloading it."
+    return None
