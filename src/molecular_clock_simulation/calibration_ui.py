@@ -51,6 +51,8 @@ def render_calibration_tab(
     import streamlit as st
 
     st.subheader("Tree Calibration")
+    with st.sidebar:
+        st.header("Tree Calibration")
     if reconstructed_newick is None:
         # Calibration depends on branch lengths estimated during reconstruction.
         st.info("Complete tree reconstruction before calibrating the tree.")
@@ -68,32 +70,33 @@ def render_calibration_tab(
         st.warning("The reconstructed tree must contain at least two terminal taxa.")
         return
 
-    with st.form(f"{state_prefix}_calibration_form"):
-        columns = st.columns(3)
-        taxon_a = columns[0].selectbox(
-            "First taxon",
-            options=taxa,
-            key=f"{state_prefix}_calibration_taxon_a",
-        )
-        taxon_b = columns[1].selectbox(
-            "Second taxon",
-            options=taxa,
-            index=1,
-            key=f"{state_prefix}_calibration_taxon_b",
-        )
-        age_mya = columns[2].number_input(
-            "MRCA age (million years)",
-            min_value=0.000001,
-            value=10.0,
-            step=1.0,
-            format="%.6f",
-            key=f"{state_prefix}_calibration_age_mya",
-        )
-        submitted = st.form_submit_button(
-            "Calibrate Tree",
-            type="primary",
-            width="stretch",
-        )
+    with st.sidebar:
+        with st.form(f"{state_prefix}_calibration_form"):
+            # Keep workflow inputs together in the sidebar like the other stages.
+            taxon_a = st.selectbox(
+                "First taxon",
+                options=taxa,
+                key=f"{state_prefix}_calibration_taxon_a",
+            )
+            taxon_b = st.selectbox(
+                "Second taxon",
+                options=taxa,
+                index=1,
+                key=f"{state_prefix}_calibration_taxon_b",
+            )
+            age_mya = st.number_input(
+                "MRCA age (million years)",
+                min_value=0.000001,
+                value=10.0,
+                step=1.0,
+                format="%.6f",
+                key=f"{state_prefix}_calibration_age_mya",
+            )
+            submitted = st.form_submit_button(
+                "Calibrate Tree",
+                type="primary",
+                width="stretch",
+            )
 
     if submitted:
         try:
