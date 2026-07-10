@@ -5,11 +5,9 @@ from __future__ import annotations
 import html
 import io
 import json
-import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
-from pathlib import PurePath
 from typing import Any
 
 from molecular_clock_simulation.distance_analysis import (
@@ -26,7 +24,6 @@ from relaxedclock.simulator import (
     RelaxedClockConfig,
     RelaxedClockResult,
     RelaxedTreeNode,
-    format_fasta,
     run_simulation,
     summary_statistics,
 )
@@ -44,7 +41,13 @@ from common import (
     DARK_THEME,
     dark_theme_css,
     default_download_stem,
-    download_unavailable_warning,
+    download_filename,
+    dot_escape,
+    format_fasta,
+    metadata_json,
+    render_dot_png,
+    synchronize_download_state,
+    validate_download_stem,
 )
 
 BRANCH_LENGTH_LABELS = {
@@ -410,15 +413,6 @@ def node_label(node: RelaxedTreeNode) -> str:
     return f"{name}\\ndepth {node.depth}"
 
 
-def dot_escape(value: str) -> str:
-    """Escape a value for use in a quoted DOT string.
-
-    :param value: Raw string value to embed in DOT source.
-    :return: Escaped value safe for a quoted DOT string.
-    """
-    return value.replace("\\", "\\\\").replace('"', '\\"')
-
-
 def fasta_text(result: RelaxedClockResult) -> str:
     """Return terminal sequences as FASTA text.
 
@@ -426,16 +420,6 @@ def fasta_text(result: RelaxedClockResult) -> str:
     :return: FASTA-formatted terminal sequences.
     """
     return format_fasta(result.terminal_sequences)
-
-
-def metadata_json(result: RelaxedClockResult) -> str:
-    """Return simulation metadata as formatted JSON text.
-
-    :param result: Completed simulation result.
-    :return: Pretty-printed metadata JSON ending with a newline.
-    """
-    # Sort keys so downloaded metadata is stable and easier to diff.
-    return json.dumps(result.to_metadata(), indent=2, sort_keys=True) + "\n"
 
 
 def tree_png_bytes(
@@ -451,18 +435,8 @@ def tree_png_bytes(
     if isinstance(tree, RelaxedTreeNode):
         return scaled_tree_png_bytes(tree, branch_lengths)
 
-    # Streamlit can display DOT directly, but downloads need a concrete image file.
-    if shutil.which("dot") is None:
-        raise RuntimeError("Graphviz 'dot' command is required for PNG export")
-
-    completed = subprocess.run(
-        ["dot", "-Tpng"],
-        input=tree.encode("utf-8"),
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=True,
-    )
-    return completed.stdout
+    # DOT-based reconstruction graphics use the shared Graphviz renderer.
+    return render_dot_png(tree)
 
 
 def scaled_tree_png_bytes(
@@ -534,35 +508,6 @@ def scaled_tree_png_bytes(
     output = io.BytesIO()
     image.save(output, format="PNG")
     return output.getvalue()
-
-
-def validate_download_stem(value: str) -> tuple[str | None, str | None]:
-    """Validate a user-entered download file stem.
-
-    :param value: Raw user-entered file stem.
-    :return: Tuple containing the cleaned stem and error message, one of which is None.
-    """
-    stem = value.strip()
-    if not stem:
-        return None, "Enter a file stem before downloads are available."
-    # Reject path-like values because Streamlit download names should be filenames only.
-    if "/" in stem or "\\" in stem:
-        return None, "Enter a file stem only, without a folder or path."
-    if stem in {".", ".."}:
-        return None, "Enter a file stem, not a relative path marker."
-    if PurePath(stem).suffix:
-        return None, "Enter the name without a file extension."
-    return stem, None
-
-
-def download_filename(stem: str, extension: str) -> str:
-    """Build a download filename from a validated stem and extension.
-
-    :param stem: Validated file stem without path or extension.
-    :param extension: File extension without a leading dot.
-    :return: Complete filename for a download.
-    """
-    return f"{stem}.{extension}"
 
 
 def download_payload(
@@ -692,22 +637,16 @@ def render_app() -> None:
 
         :return: None.
         """
-        selection = st.session_state[download_selection_key]
-        unavailable_warning = download_unavailable_warning(
-            selection,
-            distance_matrix=st.session_state.get("relaxed_distance_matrix"),
-            reconstructed_newick=st.session_state.get(reconstruction_newick_key),
-            reconstructed_dot=st.session_state.get(reconstruction_dot_key),
-        )
-        st.session_state[download_unavailable_key] = unavailable_warning is not None
-        # Unavailable selections remain blank; available selections receive their default.
-        st.session_state[download_stem_key] = (
-            ""
-            if unavailable_warning
-            else default_download_stem(
-                selection,
-                st.session_state.get("relaxed_distance_matrix"),
-            )
+        # Selection changes intentionally overwrite any user-edited file stem.
+        synchronize_download_state(
+            st.session_state,
+            selection_key=download_selection_key,
+            stem_key=download_stem_key,
+            unavailable_key=download_unavailable_key,
+            distance_matrix_key="relaxed_distance_matrix",
+            reconstructed_newick_key=reconstruction_newick_key,
+            reconstructed_dot_key=reconstruction_dot_key,
+            reset_stem=True,
         )
 
     def sync_sidebar_tab_from_main() -> None:
@@ -965,23 +904,15 @@ def render_app() -> None:
             key=download_selection_key,
             on_change=reset_download_stem,
         )
-        unavailable_warning = download_unavailable_warning(
-            download_selection,
-            distance_matrix=st.session_state.get("relaxed_distance_matrix"),
-            reconstructed_newick=st.session_state.get(reconstruction_newick_key),
-            reconstructed_dot=st.session_state.get(reconstruction_dot_key),
+        unavailable_warning = synchronize_download_state(
+            st.session_state,
+            selection_key=download_selection_key,
+            stem_key=download_stem_key,
+            unavailable_key=download_unavailable_key,
+            distance_matrix_key="relaxed_distance_matrix",
+            reconstructed_newick_key=reconstruction_newick_key,
+            reconstructed_dot_key=reconstruction_dot_key,
         )
-        was_unavailable = st.session_state.get(download_unavailable_key, False)
-        if unavailable_warning:
-            # Clear any stale or user-edited stem while the selected data is unavailable.
-            st.session_state[download_stem_key] = ""
-        elif was_unavailable:
-            # Populate the default automatically when a calculation makes the data available.
-            st.session_state[download_stem_key] = default_download_stem(
-                download_selection,
-                st.session_state.get("relaxed_distance_matrix"),
-            )
-        st.session_state[download_unavailable_key] = unavailable_warning is not None
         download_stem_input = st.text_input(
             "File stem",
             key=download_stem_key,

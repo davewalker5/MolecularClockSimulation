@@ -9,6 +9,9 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
 
+from common.identifiers import IdentifierCounter
+from common.serialization import format_fasta
+
 from biology import BiologySettings, load_biology_settings, mutate_base
 
 BASES = ("A", "C", "G", "T")
@@ -458,24 +461,6 @@ def to_newick(node: TreeNode) -> str:
     return f"({children}){label}{branch}"
 
 
-def format_fasta(sequences: dict[str, str], line_width: int = 80) -> str:
-    """Format terminal sequences as FASTA text.
-
-    :param sequences: Mapping of sequence name to DNA sequence.
-    :param line_width: Maximum number of bases per FASTA sequence line.
-    :return: FASTA-formatted text ending with a trailing newline.
-    """
-    records: list[str] = []
-    for name, sequence in sequences.items():
-        records.append(f">{name}")
-        # Wrap long sequences to keep the FASTA readable and broadly compatible.
-        records.extend(
-            sequence[index : index + line_width]
-            for index in range(0, len(sequence), line_width)
-        )
-    return "\n".join(records) + "\n"
-
-
 def node_to_dict(node: TreeNode) -> dict[str, Any]:
     """Convert a tree node into JSON-serializable metadata.
 
@@ -497,19 +482,4 @@ def node_to_dict(node: TreeNode) -> dict[str, Any]:
     }
 
 
-class _IdCounter:
-    def __init__(self) -> None:
-        """Create a counter for deterministic node identifiers.
-
-        :return: None.
-        """
-        self.value = 0
-
-    def next(self, prefix: str) -> str:
-        """Return the next identifier with the requested prefix.
-
-        :param prefix: Prefix describing the node type.
-        :return: Stable identifier such as node_1 or leaf_2.
-        """
-        self.value += 1
-        return f"{prefix}_{self.value}"
+_IdCounter = IdentifierCounter

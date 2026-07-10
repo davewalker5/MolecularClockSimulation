@@ -10,6 +10,9 @@ from pathlib import Path
 from statistics import mean
 from typing import Any
 
+from common.identifiers import IdentifierCounter
+from common.serialization import format_fasta
+
 from biology import BiologySettings, is_dna_alphabet, load_biology_settings, mutate_base
 
 @dataclass(frozen=True)
@@ -723,24 +726,6 @@ def newick_branch_value(node: RelaxedTreeNode, branch_lengths: str) -> float:
     return node.genetic_change
 
 
-def format_fasta(sequences: dict[str, str], line_width: int = 80) -> str:
-    """Format terminal sequences as FASTA text.
-
-    :param sequences: Mapping of sequence name to sequence string.
-    :param line_width: Maximum number of characters per FASTA sequence line.
-    :return: FASTA-formatted text ending with a trailing newline.
-    """
-    records: list[str] = []
-    for name, sequence in sequences.items():
-        records.append(f">{name}")
-        # Wrap long sequences to keep the FASTA readable for downstream tools.
-        records.extend(
-            sequence[index : index + line_width]
-            for index in range(0, len(sequence), line_width)
-        )
-    return "\n".join(records) + "\n"
-
-
 def node_to_dict(node: RelaxedTreeNode) -> dict[str, Any]:
     """Convert a relaxed tree node into JSON-serializable metadata.
 
@@ -791,19 +776,4 @@ def summary_statistics(result: RelaxedClockResult) -> dict[str, Any]:
     }
 
 
-class _IdCounter:
-    def __init__(self) -> None:
-        """Create a counter for deterministic identifiers.
-
-        :return: None.
-        """
-        self.value = 0
-
-    def next(self, prefix: str) -> str:
-        """Return the next identifier with the requested prefix.
-
-        :param prefix: Prefix describing the identifier type.
-        :return: Stable identifier such as node_1 or Taxon_2.
-        """
-        self.value += 1
-        return f"{prefix}_{self.value}"
+_IdCounter = IdentifierCounter

@@ -10,6 +10,10 @@ from pathlib import Path
 import shutil
 import subprocess
 
+from PIL import Image
+
+from common.graphviz import dot_escape as _dot_escape
+
 
 @dataclass
 class NewickNode:
@@ -318,8 +322,6 @@ def compare_trees(
     :param output_path: Destination PNG file path.
     :return: Destination path after writing the comparison image.
     """
-    from PIL import Image
-
     destination = Path(output_path)
     if destination.suffix.lower() != ".png":
         raise ValueError("Tree comparison output path must end with .png")
@@ -376,13 +378,3 @@ def compare_trees(
             destination.parent.mkdir(parents=True, exist_ok=True)
             canvas.save(destination, format="PNG")
     return destination
-
-
-def _dot_escape(value: str) -> str:
-    """Escape text embedded in a quoted Graphviz string.
-
-    :param value: Raw label or title.
-    :return: Graphviz-safe string content.
-    """
-    # Escape backslashes first so quote escaping is not itself altered.
-    return value.replace("\\", "\\\\").replace('"', '\\"')

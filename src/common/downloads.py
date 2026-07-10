@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import MutableMapping
+from pathlib import PurePath
 from typing import Any
 
 from common.constants import (
@@ -74,3 +76,75 @@ def download_unavailable_warning(
     if selection == DOWNLOAD_RECONSTRUCTED_TREE_PNG and reconstructed_dot is None:
         return "You must reconstruct a tree before downloading it."
     return None
+
+
+def validate_download_stem(value: str) -> tuple[str | None, str | None]:
+    """Validate a user-entered download file stem.
+
+    :param value: Raw user-entered file stem.
+    :return: Cleaned stem and error message, one of which is None.
+    """
+    stem = value.strip()
+    if not stem:
+        return None, "Enter a file stem before downloads are available."
+    # Streamlit download names must be plain filenames rather than paths.
+    if "/" in stem or "\\" in stem:
+        return None, "Enter a file stem only, without a folder or path."
+    if stem in {".", ".."}:
+        return None, "Enter a file stem, not a relative path marker."
+    if PurePath(stem).suffix:
+        return None, "Enter the name without a file extension."
+    return stem, None
+
+
+def download_filename(stem: str, extension: str) -> str:
+    """Build a download filename from a validated stem and extension.
+
+    :param stem: Validated file stem without path or extension.
+    :param extension: File extension without a leading dot.
+    :return: Complete filename for a download.
+    """
+    # Keep extension assembly consistent for every explorer download.
+    return f"{stem}.{extension}"
+
+
+def synchronize_download_state(
+    state: MutableMapping[str, Any],
+    *,
+    selection_key: str,
+    stem_key: str,
+    unavailable_key: str,
+    distance_matrix_key: str,
+    reconstructed_newick_key: str,
+    reconstructed_dot_key: str,
+    reset_stem: bool = False,
+) -> str | None:
+    """Synchronize download availability and the editable default stem.
+
+    :param state: Mutable session-state mapping used by the explorer.
+    :param selection_key: State key containing the selected download type.
+    :param stem_key: State key containing the editable filename stem.
+    :param unavailable_key: State key recording prior unavailability.
+    :param distance_matrix_key: State key containing the calculated matrix.
+    :param reconstructed_newick_key: State key containing reconstructed Newick text.
+    :param reconstructed_dot_key: State key containing reconstructed DOT source.
+    :param reset_stem: Whether a selection change must overwrite the current stem.
+    :return: Warning text when the selected download is unavailable, otherwise None.
+    """
+    selection = state[selection_key]
+    distance_matrix = state.get(distance_matrix_key)
+    warning = download_unavailable_warning(
+        selection,
+        distance_matrix=distance_matrix,
+        reconstructed_newick=state.get(reconstructed_newick_key),
+        reconstructed_dot=state.get(reconstructed_dot_key),
+    )
+    was_unavailable = state.get(unavailable_key, False)
+
+    # Clear unavailable downloads and restore defaults on selection or availability changes.
+    if warning:
+        state[stem_key] = ""
+    elif reset_stem or was_unavailable:
+        state[stem_key] = default_download_stem(selection, distance_matrix)
+    state[unavailable_key] = warning is not None
+    return warning
