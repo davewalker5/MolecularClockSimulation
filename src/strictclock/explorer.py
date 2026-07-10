@@ -18,6 +18,10 @@ from molecular_clock_simulation.reconstruction import (
     reconstructed_tree_to_dot,
     reconstruct_tree,
 )
+from molecular_clock_simulation.calibration_ui import (
+    clear_calibration_state,
+    render_calibration_tab,
+)
 from strictclock.simulator import (
     SimulationConfig,
     SimulationResult,
@@ -264,7 +268,7 @@ def render_app() -> None:
 
     stage = st.segmented_control(
         "Workflow",
-        options=("Simulation", "Distance Matrix", "Reconstruction", "Downloads"),
+        options=("Simulation", "Distance Matrix", "Reconstruction", "Calibration", "Downloads"),
         default="Simulation",
         key="strict_workflow_stage",
         label_visibility="collapsed",
@@ -330,6 +334,7 @@ def render_app() -> None:
                 "strict_reconstruction_error",
             ):
                 st.session_state.pop(key, None)
+            clear_calibration_state(st.session_state, "strict")
 
     result: SimulationResult = st.session_state.result
     summary = summarize_result(result)
@@ -374,6 +379,7 @@ def render_app() -> None:
             reconstruct = st.button("Reconstruct Tree", type="primary", width="stretch")
 
         if reconstruct:
+            clear_calibration_state(st.session_state, "strict")
             matrix_payload = st.session_state.get("strict_distance_matrix")
             if matrix_payload is None:
                 st.warning("Calculate a distance matrix before reconstructing a tree.")
@@ -404,6 +410,12 @@ def render_app() -> None:
                 st.code(st.session_state["strict_reconstruction_newick"], language="text")
         else:
             st.info("Calculate a distance matrix, then reconstruct a tree.")
+
+    elif stage == "Calibration":
+        render_calibration_tab(
+            st.session_state.get("strict_reconstruction_newick"),
+            "strict",
+        )
 
     else:
         st.subheader("Downloads")

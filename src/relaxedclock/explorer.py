@@ -20,6 +20,10 @@ from molecular_clock_simulation.reconstruction import (
     reconstructed_tree_to_dot,
     reconstruct_tree,
 )
+from molecular_clock_simulation.calibration_ui import (
+    clear_calibration_state,
+    render_calibration_tab,
+)
 from relaxedclock.simulator import (
     RelaxedClockConfig,
     RelaxedClockResult,
@@ -597,7 +601,7 @@ def render_app() -> None:
 
     stage = st.segmented_control(
         "Workflow",
-        options=("Simulation", "Distance Matrix", "Reconstruction", "Downloads"),
+        options=("Simulation", "Distance Matrix", "Reconstruction", "Calibration", "Downloads"),
         default="Simulation",
         key="relaxed_workflow_stage",
         label_visibility="collapsed",
@@ -693,6 +697,7 @@ def render_app() -> None:
                 "relaxed_reconstruction_error",
             ):
                 st.session_state.pop(key, None)
+            clear_calibration_state(st.session_state, "relaxed")
 
     result: RelaxedClockResult = st.session_state.relaxed_result
     summary = summarize_result(result)
@@ -737,6 +742,7 @@ def render_app() -> None:
             reconstruct = st.button("Reconstruct Tree", type="primary", width="stretch")
 
         if reconstruct:
+            clear_calibration_state(st.session_state, "relaxed")
             matrix_payload = st.session_state.get("relaxed_distance_matrix")
             if matrix_payload is None:
                 st.warning("Calculate a distance matrix before reconstructing a tree.")
@@ -767,6 +773,12 @@ def render_app() -> None:
                 st.code(st.session_state["relaxed_reconstruction_newick"], language="text")
         else:
             st.info("Calculate a distance matrix, then reconstruct a tree.")
+
+    elif stage == "Calibration":
+        render_calibration_tab(
+            st.session_state.get("relaxed_reconstruction_newick"),
+            "relaxed",
+        )
 
     else:
         st.subheader("Downloads")

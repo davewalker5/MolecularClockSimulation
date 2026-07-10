@@ -7,6 +7,7 @@ import pytest
 from treecalibration.calibration import calibrate_tree, to_newick
 from treecalibration.cli import main
 from treecomparison.comparison import parse_newick
+from molecular_clock_simulation.calibration_ui import clear_calibration_state
 
 
 def test_calibrate_tree_scales_copy_from_mrca_tip_depth():
@@ -92,3 +93,21 @@ def test_to_newick_preserves_quoted_labels():
     :return: None.
     """
     assert to_newick(parse_newick("('Taxon A':1,B:1);")) == "('Taxon A':1,B:1);\n"
+
+
+def test_clear_calibration_state_removes_results_and_widget_values():
+    """Confirm changing an upstream tree invalidates all calibration state.
+
+    :return: None.
+    """
+    state = {
+        "strict_calibration_newick": "(A:1,B:1);",
+        "strict_calibration_taxon_a": "A",
+        "strict_calibration_taxon_b": "B",
+        "strict_calibration_age_mya": 10.0,
+        "unrelated": "preserved",
+    }
+
+    clear_calibration_state(state, "strict")
+
+    assert state == {"unrelated": "preserved"}
