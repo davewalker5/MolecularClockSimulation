@@ -252,7 +252,7 @@ def main() -> int:
     return subprocess.call(command)
 
 
-def render_app() -> None:
+def render_tabbed_app() -> None:
     """Render the Streamlit application.
 
     :return: None.
@@ -549,6 +549,203 @@ def render_app() -> None:
                     mime=mime,
                     width="stretch",
                 )
+
+
+def render_app() -> None:
+    """Render the strict explorer as one explicit, conditionally rendered workflow."""
+    import streamlit as st
+
+    defaults = ExplorerDefaults()
+    st.set_page_config(
+        page_title="Strict Molecular Clock Explorer",
+        page_icon="",
+        layout="wide",
+    )
+    st.markdown(dark_theme_css(), unsafe_allow_html=True)
+    st.title("Strict Molecular Clock Explorer")
+
+    with st.sidebar:
+        st.header("Workflow")
+        stage = st.radio(
+            "Stage",
+            options=("Simulation", "Distance Matrix", "Reconstruction", "Downloads"),
+            key="strict_workflow_stage",
+            label_visibility="collapsed",
+        )
+
+    if "result" not in st.session_state:
+        initial_config = build_config(
+            sequence_length=defaults.sequence_length,
+            number_of_taxa=defaults.number_of_taxa,
+            random_seed=defaults.random_seed,
+            tree_topology=defaults.tree_topology,
+            root_age=defaults.root_age,
+            mutation_rate=defaults.mutation_rate,
+        )
+        st.session_state.result = run_simulation(initial_config)
+
+    if stage == "Simulation":
+        with st.sidebar:
+            st.header("Simulation")
+            number_of_taxa = st.slider(
+                "Number of taxa", 2, 64, defaults.number_of_taxa, step=1
+            )
+            sequence_length = st.slider(
+                "Sequence length", 10, 5000, defaults.sequence_length, step=10
+            )
+            mutation_rate = st.number_input(
+                "Mutation rate",
+                0.00001,
+                1.0,
+                defaults.mutation_rate,
+                step=0.001,
+                format="%.5f",
+            )
+            random_seed = st.number_input(
+                "Random seed", 0, 2_147_483_647, defaults.random_seed, step=1
+            )
+            tree_topology = st.selectbox(
+                "Branching model",
+                options=("balanced", "random"),
+                index=0 if defaults.tree_topology == "balanced" else 1,
+            )
+            root_age = st.number_input(
+                "Root age", 0.01, 100.0, defaults.root_age, step=0.1, format="%.2f"
+            )
+            generate = st.button("Generate", type="primary", width="stretch")
+
+        if generate:
+            config = build_config(
+                sequence_length=sequence_length,
+                number_of_taxa=number_of_taxa,
+                random_seed=int(random_seed),
+                tree_topology=tree_topology,
+                root_age=root_age,
+                mutation_rate=mutation_rate,
+            )
+            st.session_state.result = run_simulation(config)
+            for key in (
+                "strict_distance_matrix",
+                "strict_distance_model",
+                "strict_reconstruction_dot",
+                "strict_reconstruction_newick",
+                "strict_reconstruction_error",
+            ):
+                st.session_state.pop(key, None)
+
+    result: SimulationResult = st.session_state.result
+    summary = summarize_result(result)
+    fasta = fasta_text(result)
+    metadata = metadata_json(result)
+    tree_dot = tree_to_dot(result.root)
+
+    if stage == "Simulation":
+        st.subheader("Simulated Phylogeny")
+        st.graphviz_chart(tree_dot, width="stretch")
+        columns = st.columns(4)
+        columns[0].metric("Taxa", summary["number_of_taxa"])
+        columns[1].metric("Sequence length", summary["sequence_length"])
+        columns[2].metric("Mutations", summary["number_of_mutations"])
+        columns[3].metric("Seed", summary["random_seed"])
+        st.subheader("Terminal Sequences")
+        st.code(fasta, language="text")
+        with st.expander("True tree Newick"):
+            st.code(result.newick, language="text")
+
+    elif stage == "Distance Matrix":
+        with st.sidebar:
+            st.header("Distance Matrix")
+            render_distance_analysis_controls(
+                result.terminal_sequences,
+                state_key_prefix="strict",
+            )
+        st.subheader("Distance Analysis")
+        render_distance_analysis_tab(
+            result.terminal_sequences,
+            state_key_prefix="strict",
+        )
+
+    elif stage == "Reconstruction":
+        with st.sidebar:
+            st.header("Reconstruction")
+            algorithm = st.selectbox(
+                "Algorithm",
+                options=("UPGMA", "Neighbor Joining"),
+                key="strict_workflow_reconstruction_algorithm",
+            )
+            reconstruct = st.button("Reconstruct Tree", type="primary", width="stretch")
+
+        if reconstruct:
+            matrix_payload = st.session_state.get("strict_distance_matrix")
+            if matrix_payload is None:
+                st.warning("Calculate a distance matrix before reconstructing a tree.")
+            else:
+                try:
+                    reconstructed = reconstruct_tree(matrix_payload, method=algorithm)
+                except ValueError as error:
+                    st.session_state["strict_reconstruction_error"] = str(error)
+                    st.session_state.pop("strict_reconstruction_dot", None)
+                    st.session_state.pop("strict_reconstruction_newick", None)
+                else:
+                    st.session_state.pop("strict_reconstruction_error", None)
+                    st.session_state["strict_reconstruction_dot"] = reconstructed_tree_to_dot(
+                        reconstructed,
+                        graph_name="strict_reconstructed_tree",
+                        colors=DARK_THEME,
+                    )
+                    st.session_state["strict_reconstruction_newick"] = (
+                        reconstructed_tree_newick(reconstructed)
+                    )
+
+        st.subheader("Reconstructed Phylogeny")
+        if st.session_state.get("strict_reconstruction_error"):
+            st.warning(st.session_state["strict_reconstruction_error"])
+        elif st.session_state.get("strict_reconstruction_dot"):
+            st.graphviz_chart(st.session_state["strict_reconstruction_dot"], width="stretch")
+            with st.expander("Reconstructed Newick"):
+                st.code(st.session_state["strict_reconstruction_newick"], language="text")
+        else:
+            st.info("Calculate a distance matrix, then reconstruct a tree.")
+
+    else:
+        st.subheader("Downloads")
+        selection = st.selectbox(
+            "Download",
+            options=DOWNLOAD_OPTIONS,
+            key="strict_workflow_download_selection",
+        )
+        default_stem = default_download_stem(
+            selection, st.session_state.get("strict_distance_matrix")
+        )
+        stem_input = st.text_input("File stem", value=default_stem)
+        stem, stem_error = validate_download_stem(stem_input)
+        try:
+            data, extension, mime = download_payload(
+                selection,
+                result,
+                fasta=fasta,
+                metadata=metadata,
+                tree_dot=tree_dot,
+                distance_matrix=st.session_state.get("strict_distance_matrix"),
+                reconstructed_newick=st.session_state.get("strict_reconstruction_newick"),
+                reconstructed_dot=st.session_state.get("strict_reconstruction_dot"),
+            )
+        except (ValueError, RuntimeError, subprocess.CalledProcessError) as error:
+            st.warning(str(error))
+            st.download_button(
+                "Download", data="", file_name="unavailable", disabled=True, width="stretch"
+            )
+        else:
+            if stem_error:
+                st.warning(stem_error)
+            st.download_button(
+                "Download",
+                data=data,
+                file_name=download_filename(stem, extension),
+                mime=mime,
+                disabled=stem_error is not None,
+                width="stretch",
+            )
 
 
 if __name__ == "__main__":
