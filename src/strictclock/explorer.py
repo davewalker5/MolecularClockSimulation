@@ -2,19 +2,16 @@
 
 from __future__ import annotations
 
-import html
 import json
 import subprocess
 import sys
 from dataclasses import dataclass
 from typing import Any
 
-from distancematrix.calculator import calculate_distance_matrix
 from molecular_clock_simulation.distance_analysis import (
     distance_matrix_csv_text,
     render_distance_analysis_controls,
     render_distance_analysis_tab,
-    selected_distance_model,
 )
 from molecular_clock_simulation.reconstruction import (
     reconstructed_tree_newick,
@@ -46,9 +43,9 @@ from common import (
     format_fasta,
     metadata_json,
     render_dot_png,
-    synchronize_download_state,
     validate_download_stem,
 )
+
 
 @dataclass(frozen=True)
 class ExplorerDefaults:
@@ -252,305 +249,6 @@ def main() -> int:
     return subprocess.call(command)
 
 
-def render_tabbed_app() -> None:
-    """Render the Streamlit application.
-
-    :return: None.
-    """
-    # Import Streamlit lazily so helper functions remain testable without app startup.
-    import streamlit as st
-
-    defaults = ExplorerDefaults()
-
-    # Configure the page before emitting any visible Streamlit elements.
-    st.set_page_config(
-        page_title="Strict Molecular Clock Explorer",
-        page_icon="",
-        layout="wide",
-    )
-    st.markdown(dark_theme_css(), unsafe_allow_html=True)
-    st.title("Strict Molecular Clock Explorer")
-
-    reconstruction_warning_key = "strict_reconstruction_warning"
-    reconstruction_error_key = "strict_reconstruction_error"
-    reconstruction_dot_key = "strict_reconstruction_dot"
-    reconstruction_newick_key = "strict_reconstruction_newick"
-    download_selection_key = "strict_download_selection"
-    download_stem_key = "strict_download_stem"
-    download_unavailable_key = "strict_download_unavailable"
-    main_tab_labels = [
-        "FASTA Sequences",
-        "Newick Output",
-        "Distance Analysis",
-        "Reconstruction",
-        "Downloads",
-    ]
-
-    def reset_download_stem() -> None:
-        """Reset the editable file stem after the download selection changes.
-
-        :return: None.
-        """
-        # Selection changes intentionally overwrite any user-edited file stem.
-        synchronize_download_state(
-            st.session_state,
-            selection_key=download_selection_key,
-            stem_key=download_stem_key,
-            unavailable_key=download_unavailable_key,
-            distance_matrix_key="strict_distance_matrix",
-            reconstructed_newick_key=reconstruction_newick_key,
-            reconstructed_dot_key=reconstruction_dot_key,
-            reset_stem=True,
-        )
-
-    with st.sidebar:
-        simulation_sidebar_tab, distance_sidebar_tab, reconstruction_sidebar_tab = st.tabs(
-            ["Simulation", "Distance", "Reconstruction"],
-        )
-
-    with simulation_sidebar_tab:
-        st.header("Simulation")
-        number_of_taxa = st.slider(
-            "Number of taxa",
-            min_value=2,
-            max_value=64,
-            value=defaults.number_of_taxa,
-            step=1,
-        )
-        sequence_length = st.slider(
-            "Sequence length",
-            min_value=10,
-            max_value=5000,
-            value=defaults.sequence_length,
-            step=10,
-        )
-        mutation_rate = st.number_input(
-            "Mutation rate",
-            min_value=0.0,
-            max_value=10.0,
-            value=defaults.mutation_rate,
-            step=0.01,
-            format="%.5f",
-        )
-        random_seed = st.number_input(
-            "Random seed",
-            min_value=0,
-            max_value=2_147_483_647,
-            value=defaults.random_seed,
-            step=1,
-        )
-        tree_topology = st.selectbox(
-            "Branching model",
-            options=("balanced", "random"),
-            index=0 if defaults.tree_topology == "balanced" else 1,
-        )
-        root_age = st.number_input(
-            "Root age",
-            min_value=0.01,
-            max_value=100.0,
-            value=defaults.root_age,
-            step=0.1,
-            format="%.2f",
-        )
-        generate = st.button("Generate", type="primary", width="stretch")
-
-    # Store the latest result in session state so tab changes do not rerun simulation.
-    if "result" not in st.session_state or generate:
-        config = build_config(
-            sequence_length=sequence_length,
-            number_of_taxa=number_of_taxa,
-            random_seed=int(random_seed),
-            tree_topology=tree_topology,
-            root_age=root_age,
-            mutation_rate=mutation_rate,
-        )
-        st.session_state.result = run_simulation(config)
-
-    result: SimulationResult = st.session_state.result
-    summary = summarize_result(result)
-    fasta = fasta_text(result)
-    metadata = metadata_json(result)
-    tree_dot = tree_to_dot(result.root)
-
-    with distance_sidebar_tab:
-        st.header("Distance")
-        render_distance_analysis_controls(
-            result.terminal_sequences,
-            state_key_prefix="strict",
-        )
-
-    def reconstruct_current_tree() -> None:
-        """Reconstruct before Streamlit starts the button-triggered page rerender."""
-        matrix_payload = st.session_state.get("strict_distance_matrix")
-        if matrix_payload is None:
-            # A container-side WebSocket reconnect can create a fresh Streamlit
-            # session between sidebar actions. Rebuild this inexpensive derived
-            # value from the current simulation instead of losing the workflow.
-            distance_model = selected_distance_model("strict")
-            matrix_payload = calculate_distance_matrix(
-                result.terminal_sequences,
-                distance_type=distance_model,
-            )
-            st.session_state["strict_distance_model"] = distance_model
-            st.session_state["strict_distance_matrix"] = matrix_payload
-        try:
-            reconstructed_tree = reconstruct_tree(
-                matrix_payload,
-                method=st.session_state["strict_reconstruction_algorithm"],
-            )
-        except ValueError as error:
-            st.session_state[reconstruction_warning_key] = False
-            st.session_state[reconstruction_error_key] = str(error)
-            st.session_state.pop(reconstruction_dot_key, None)
-            st.session_state.pop(reconstruction_newick_key, None)
-        else:
-            st.session_state[reconstruction_warning_key] = False
-            st.session_state.pop(reconstruction_error_key, None)
-            st.session_state[reconstruction_dot_key] = reconstructed_tree_to_dot(
-                reconstructed_tree,
-                graph_name="strict_reconstructed_tree",
-                colors=DARK_THEME,
-            )
-            st.session_state[reconstruction_newick_key] = reconstructed_tree_newick(
-                reconstructed_tree
-            )
-
-    with reconstruction_sidebar_tab:
-        st.header("Reconstruction")
-        # Submit the algorithm and action as one event. Separate widget reruns can
-        # race when the explorer is running in a slower container.
-        with st.form("strict_reconstruction_form"):
-            st.selectbox(
-                "Algorithm",
-                options=("UPGMA", "Neighbor Joining"),
-                key="strict_reconstruction_algorithm",
-            )
-            st.form_submit_button(
-                "Reconstruct Tree",
-                type="primary",
-                width="stretch",
-                on_click=reconstruct_current_tree,
-            )
-
-    # The tree is the primary visual output for this explorer release.
-    st.subheader("Phylogenetic Tree")
-    st.graphviz_chart(tree_dot, width="stretch")
-
-    st.subheader("Simulation Summary")
-    metric_columns = st.columns(4)
-    metric_columns[0].metric("Taxa", summary["number_of_taxa"])
-    metric_columns[1].metric("Sequence length", summary["sequence_length"])
-    metric_columns[2].metric("Mutations", summary["number_of_mutations"])
-    metric_columns[3].metric("Seed", summary["random_seed"])
-    st.caption(
-        f"Branching model: {html.escape(summary['tree_topology'])} | "
-        f"root age: {summary['root_age']} | "
-        f"mutation rate: {summary['mutation_rate']}"
-    )
-
-    sequence_tab, newick_tab, distance_tab, reconstruction_tab, download_tab = st.tabs(
-        main_tab_labels,
-    )
-    with sequence_tab:
-        st.code(fasta, language="text")
-    with newick_tab:
-        st.code(result.newick, language="text")
-    with distance_tab:
-        render_distance_analysis_tab(
-            result.terminal_sequences,
-            state_key_prefix="strict",
-        )
-    with reconstruction_tab:
-        if (
-            st.session_state.get(reconstruction_warning_key)
-            and st.session_state.get("strict_distance_matrix") is None
-        ):
-            st.warning("Calculate a distance matrix before reconstructing a tree.")
-        elif st.session_state.get(reconstruction_error_key):
-            st.warning(st.session_state[reconstruction_error_key])
-        elif st.session_state.get(reconstruction_dot_key):
-            st.graphviz_chart(st.session_state[reconstruction_dot_key], width="stretch")
-            with st.expander("Reconstructed Newick"):
-                st.code(st.session_state[reconstruction_newick_key], language="text")
-    with download_tab:
-        # Initialize the editable stem before Streamlit creates its stateful widget.
-        st.session_state.setdefault(
-            download_stem_key,
-            default_download_stem(
-                st.session_state.get(download_selection_key, DOWNLOAD_OPTIONS[0]),
-                st.session_state.get("strict_distance_matrix"),
-            ),
-        )
-        download_selection = st.selectbox(
-            "Download",
-            options=DOWNLOAD_OPTIONS,
-            key=download_selection_key,
-            on_change=reset_download_stem,
-        )
-        unavailable_warning = synchronize_download_state(
-            st.session_state,
-            selection_key=download_selection_key,
-            stem_key=download_stem_key,
-            unavailable_key=download_unavailable_key,
-            distance_matrix_key="strict_distance_matrix",
-            reconstructed_newick_key=reconstruction_newick_key,
-            reconstructed_dot_key=reconstruction_dot_key,
-        )
-        download_stem_input = st.text_input(
-            "File stem",
-            key=download_stem_key,
-            help="Enter the name to use for downloads, without a path or extension.",
-            disabled=unavailable_warning is not None,
-        )
-        download_stem, download_stem_error = validate_download_stem(download_stem_input)
-        if unavailable_warning:
-            st.warning(unavailable_warning)
-            st.download_button(
-                "Download",
-                data="",
-                file_name="download_unavailable",
-                mime="application/octet-stream",
-                width="stretch",
-                disabled=True,
-            )
-        elif download_stem_error:
-            # Keep the button visible but disabled so the required action is clear.
-            st.warning(download_stem_error)
-            st.download_button(
-                "Download",
-                data="",
-                file_name="enter_file_stem",
-                mime="application/octet-stream",
-                width="stretch",
-                disabled=True,
-            )
-        else:
-            try:
-                # PNG generation can fail when Graphviz is missing or cannot render.
-                download_data, extension, mime = download_payload(
-                    download_selection,
-                    result,
-                    fasta=fasta,
-                    metadata=metadata,
-                    tree_dot=tree_dot,
-                    distance_matrix=st.session_state.get("strict_distance_matrix"),
-                    reconstructed_newick=st.session_state.get(reconstruction_newick_key),
-                    reconstructed_dot=st.session_state.get(reconstruction_dot_key),
-                )
-            except ValueError as error:
-                st.warning(str(error))
-            except (RuntimeError, subprocess.CalledProcessError) as error:
-                st.warning(f"{download_selection} export is unavailable: {error}")
-            else:
-                st.download_button(
-                    "Download",
-                    data=download_data,
-                    file_name=download_filename(download_stem, extension),
-                    mime=mime,
-                    width="stretch",
-                )
-
-
 def render_app() -> None:
     """Render the strict explorer as one explicit, conditionally rendered workflow."""
     import streamlit as st
@@ -564,14 +262,14 @@ def render_app() -> None:
     st.markdown(dark_theme_css(), unsafe_allow_html=True)
     st.title("Strict Molecular Clock Explorer")
 
-    with st.sidebar:
-        st.header("Workflow")
-        stage = st.radio(
-            "Stage",
-            options=("Simulation", "Distance Matrix", "Reconstruction", "Downloads"),
-            key="strict_workflow_stage",
-            label_visibility="collapsed",
-        )
+    stage = st.segmented_control(
+        "Workflow",
+        options=("Simulation", "Distance Matrix", "Reconstruction", "Downloads"),
+        default="Simulation",
+        key="strict_workflow_stage",
+        label_visibility="collapsed",
+        width="stretch",
+    )
 
     if "result" not in st.session_state:
         initial_config = build_config(
