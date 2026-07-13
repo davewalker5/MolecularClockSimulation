@@ -77,7 +77,7 @@
         <bpmn:targetRef>DataObjectReference_108biyh</bpmn:targetRef>
       </bpmn:dataOutputAssociation>
     </bpmn:task>
-    <bpmn:task id="Activity_1mk5h38" name="Extract Terminal Sequences">
+    <bpmn:task id="Activity_1mk5h38" name="Phylogenetic Reconstruction">
       <bpmn:incoming>Flow_04y763r</bpmn:incoming>
       <bpmn:outgoing>Flow_0syxml3</bpmn:outgoing>
       <bpmn:property id="Property_1irfaec" name="__targetRef_placeholder" />
