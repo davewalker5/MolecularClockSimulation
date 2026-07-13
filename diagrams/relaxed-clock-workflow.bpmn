@@ -109,7 +109,7 @@
       <bpmn:incoming>Flow_0mls6mn</bpmn:incoming>
       <bpmn:terminateEventDefinition id="TerminateEventDefinition_0gpq7wa" />
     </bpmn:endEvent>
-    <bpmn:dataObjectReference id="DataObjectReference_1m1iycr" name="Ultrametric Tree with Terminal Sequences" dataObjectRef="DataObject_0h9ree4" />
+    <bpmn:dataObjectReference id="DataObjectReference_1m1iycr" name="Non-rooted Tree with Terminal Sequences" dataObjectRef="DataObject_0h9ree4" />
     <bpmn:dataObject id="DataObject_0h9ree4" />
     <bpmn:dataObjectReference id="DataObjectReference_05xkyq0" name="FASTA, Newick, JSON" dataObjectRef="DataObject_1xm3j1h" />
     <bpmn:dataObject id="DataObject_1xm3j1h" />
@@ -193,7 +193,7 @@
       <bpmndi:BPMNShape id="DataObjectReference_1m1iycr_di" bpmnElement="DataObjectReference_1m1iycr">
         <dc:Bounds x="1262" y="115" width="36" height="50" />
         <bpmndi:BPMNLabel>
-          <dc:Bounds x="1240" y="71" width="79" height="40" />
+          <dc:Bounds x="1239" y="71" width="81" height="40" />
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="DataObjectReference_05xkyq0_di" bpmnElement="DataObjectReference_05xkyq0">
