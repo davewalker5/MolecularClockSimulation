@@ -6,7 +6,9 @@ COPY relaxedclockexplorer-${APPLICATION_VERSION}.0 /opt/relaxedclockexplorer
 
 WORKDIR /opt/relaxedclockexplorer
 
-RUN apt-get update -y
+RUN apt-get update -y \
+    && apt-get install -y --no-install-recommends graphviz \
+    && rm -rf /var/lib/apt/lists/*
 RUN pip install --no-cache-dir /opt/relaxedclockexplorer/molecular_clock_simulation-${APPLICATION_VERSION}-py3-none-any.whl
 
 ENTRYPOINT [ "relaxed-clock-explorer" ]
